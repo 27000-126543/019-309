@@ -139,6 +139,21 @@
   color: $color-text-secondary;
 }
 
+.assigneeTagDone {
+  background: rgba(0, 180, 42, 0.1);
+  color: $color-alert-green;
+  font-weight: $font-weight-medium;
+}
+
+.progressTag {
+  padding: 4rpx 14rpx;
+  background: rgba(180, 40, 45, 0.08);
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
 .statusTag {
   padding: 4rpx 14rpx;
   border-radius: $radius-sm;

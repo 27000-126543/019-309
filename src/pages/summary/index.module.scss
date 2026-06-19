@@ -3,370 +3,418 @@
 .page {
   min-height: 100vh;
   background: $color-bg-page;
-  padding-bottom: 180rpx;
+  padding-bottom: 200rpx;
+}
+
+.topBar {
+  background: $color-bg-card;
+  padding: $spacing-md $page-padding;
+  border-bottom: 1rpx solid $color-divider;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .incidentPicker {
-  background: $color-bg-card;
-  padding: $spacing-lg $page-padding;
-  margin-bottom: $spacing-md;
-  border-bottom: 1rpx solid $color-divider;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  background: linear-gradient(135deg, rgba(114,46,209,0.05) 0%, rgba(180,40,45,0.04) 100%);
+  border-radius: $radius-lg;
+  border: 1rpx solid rgba(114,46,209,0.12);
 }
 
-.pickerLabel {
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-  margin-bottom: $spacing-sm;
+.pickerInfo { flex: 1; }
+
+.pickerTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  @include text-ellipsis;
+  width: 580rpx;
   display: block;
 }
 
-.pickerBtn {
-  @include button-reset;
-  width: 100%;
-  padding: $spacing-md;
-  background: $color-bg-page;
-  border-radius: $radius-md;
-  border: 1rpx solid $color-border;
-  justify-content: space-between;
-  font-size: $font-size-md;
-  color: $color-text-primary;
-
-  &:active { background: $color-bg-hover; }
+.pickerMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
 }
 
-.pickerEmpty { color: $color-text-tertiary; }
-.pickerTitle { @include text-ellipsis; flex: 1; text-align: left; }
-.pickerArrow { color: $color-text-tertiary; margin-left: $spacing-sm; }
+.pickerArrow {
+  color: $color-text-tertiary;
+  font-size: $font-size-lg;
+  margin-left: $spacing-sm;
+}
 
 .content {
-  padding: 0 $page-padding;
+  padding: $spacing-md $page-padding;
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-md;
 }
 
-.formCard {
+.sectionCard {
   background: $color-bg-card;
   border-radius: $radius-lg;
   padding: $spacing-lg;
   box-shadow: $shadow-card;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: $spacing-md;
 }
 
-.cardTitle {
+.sectionTitle {
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
   color: $color-text-primary;
-  margin-bottom: $spacing-md;
   display: flex;
   align-items: center;
   gap: $spacing-sm;
 }
 
-.cardBadge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36rpx;
-  height: 36rpx;
+.sectionIcon {
+  width: 40rpx;
+  height: 40rpx;
   border-radius: $radius-xs;
-  background: $color-primary;
-  color: $color-text-white;
-  font-size: $font-size-xs;
+  background: rgba(114,46,209,0.1);
+  color: #722ED1;
+  @include flex-center;
+  font-size: $font-size-sm;
   font-weight: $font-weight-bold;
 }
 
+.badge {
+  padding: 4rpx 12rpx;
+  border-radius: $radius-round;
+  font-size: $font-size-xs;
+  background: rgba(114,46,209,0.1);
+  color: #722ED1;
+  font-weight: $font-weight-semibold;
+}
+
+.categoryNote {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: -$spacing-xs;
+  margin-bottom: $spacing-md;
+  line-height: $line-height-normal;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+
+  &:last-child { margin-bottom: 0; }
+}
+
 .fieldLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   font-size: $font-size-sm;
-  font-weight: $font-weight-medium;
+  font-weight: $font-weight-semibold;
   color: $color-text-primary;
-  margin-bottom: $spacing-xs;
-  display: block;
 }
 
 .fieldHint {
   font-size: $font-size-xs;
   color: $color-text-tertiary;
-  margin-bottom: $spacing-sm;
-  display: block;
-  line-height: $line-height-tight;
+  font-weight: $font-weight-regular;
 }
 
 .textarea {
   width: 100%;
-  min-height: 200rpx;
+  min-height: 180rpx;
   padding: $spacing-md;
   background: $color-bg-page;
   border-radius: $radius-md;
   border: 1rpx solid $color-border;
   font-size: $font-size-md;
   color: $color-text-primary;
-  line-height: $line-height-normal;
+  line-height: $line-height-loose;
   box-sizing: border-box;
+  transition: border-color 0.2s;
+
+  &:focus { border-color: $color-primary; }
+}
+
+.actionsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.addActionBtn {
+  @include button-reset;
+  padding: 0 $spacing-md;
+  height: 56rpx;
+  background: rgba(114,46,209,0.08);
+  color: #722ED1;
+  border-radius: $radius-md;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
 }
 
 .actionList {
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
-  margin-bottom: $spacing-md;
 }
 
 .actionItem {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: $spacing-sm;
-}
-
-.actionIndex {
-  width: 44rpx;
-  height: 44rpx;
-  border-radius: 50%;
-  background: $color-primary;
-  color: $color-text-white;
-  @include flex-center;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  flex-shrink: 0;
-}
-
-.actionInput {
-  flex: 1;
   padding: $spacing-sm $spacing-md;
   background: $color-bg-page;
   border-radius: $radius-md;
   border: 1rpx solid $color-border;
-  font-size: $font-size-md;
-  color: $color-text-primary;
 }
 
-.actionRemove {
-  @include button-reset;
-  width: 56rpx;
-  height: 56rpx;
+.actionNum {
+  width: 40rpx;
+  height: 40rpx;
   border-radius: 50%;
-  background: rgba(245,63,63,0.08);
-  color: $color-alert-red;
-  font-size: 32rpx;
-  font-weight: $font-weight-bold;
-  flex-shrink: 0;
-
-  &:active { background: rgba(245,63,63,0.15); }
-}
-
-.addActionBtn {
-  @include button-reset;
-  width: 100%;
-  height: $button-height-md;
-  background: rgba(22,93,255,0.06);
-  border: 2rpx dashed rgba(22,93,255,0.3);
-  border-radius: $radius-md;
-  color: $color-info;
-  font-size: $font-size-md;
-  font-weight: $font-weight-medium;
-
-  &:active { background: rgba(22,93,255,0.12); }
-}
-
-.timeSection {
-  display: flex;
-  flex-direction: column;
-  gap: $spacing-sm;
-}
-
-.timeOptions {
-  display: flex;
-  gap: $spacing-sm;
-  flex-wrap: wrap;
-}
-
-.timeOpt {
-  @include button-reset;
-  padding: 14rpx $spacing-md;
-  background: $color-bg-page;
-  border-radius: $radius-button;
-  border: 2rpx solid transparent;
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-  white-space: nowrap;
-
-  &:active { opacity: 0.9; }
-}
-
-.timeOptActive {
-  background: rgba(180,40,45,0.08);
-  border-color: $color-primary;
-  color: $color-primary;
-  font-weight: $font-weight-semibold;
-}
-
-.customTime {
-  padding: $spacing-sm $spacing-md;
-  background: $color-bg-page;
-  border-radius: $radius-md;
-  border: 1rpx solid $color-border;
-  font-size: $font-size-md;
-  color: $color-text-primary;
-}
-
-.previewCard {
-  background: linear-gradient(135deg, #F7F8FA 0%, #FFFFFF 100%);
-  border-radius: $radius-xl;
-  padding: $spacing-xl;
-  box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.08);
-  margin-bottom: $spacing-md;
-  border: 2rpx solid $color-primary;
-  position: relative;
-  overflow: hidden;
-}
-
-.previewCard::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 6rpx;
-  background: linear-gradient(90deg, $color-primary, $color-alert-orange, $color-alert-yellow);
-}
-
-.previewHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: $spacing-lg;
-  padding-bottom: $spacing-md;
-  border-bottom: 2rpx dashed $color-border;
-}
-
-.previewTitleBlock {
-  flex: 1;
-}
-
-.previewTag {
-  display: inline-block;
-  padding: 4rpx 16rpx;
-  background: rgba(180,40,45,0.08);
-  color: $color-primary;
-  border-radius: $radius-xs;
-  font-size: $font-size-xs;
-  font-weight: $font-weight-semibold;
-  margin-bottom: $spacing-xs;
-}
-
-.previewMainTitle {
-  font-size: $font-size-xl;
-  font-weight: $font-weight-bold;
-  color: $color-text-primary;
-  line-height: $line-height-tight;
-  @include text-ellipsis-multi(2);
-}
-
-.previewTime {
-  font-size: $font-size-xs;
-  color: $color-text-tertiary;
-  white-space: nowrap;
-  padding-left: $spacing-md;
-}
-
-.previewSection {
-  margin-bottom: $spacing-lg;
-
-  &:last-child { margin-bottom: 0; }
-}
-
-.previewSectionTitle {
-  font-size: $font-size-md;
-  font-weight: $font-weight-semibold;
-  color: $color-primary;
-  margin-bottom: $spacing-sm;
-  display: flex;
-  align-items: center;
-  gap: $spacing-xs;
-}
-
-.previewSectionTitle::before {
-  content: '';
-  width: 6rpx;
-  height: 28rpx;
-  background: $color-primary;
-  border-radius: $radius-xs;
-}
-
-.previewText {
-  font-size: $font-size-md;
-  color: $color-text-primary;
-  line-height: $line-height-loose;
-  padding-left: 12rpx;
-}
-
-.previewActionItem {
-  display: flex;
-  align-items: flex-start;
-  gap: $spacing-sm;
-  padding: $spacing-sm 0;
-  padding-left: 12rpx;
-  border-bottom: 1rpx solid $color-divider;
-
-  &:last-child { border-bottom: none; }
-}
-
-.previewActionNum {
-  width: 32rpx;
-  height: 32rpx;
-  border-radius: $radius-xs;
-  background: $color-alert-orange;
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
   color: $color-text-white;
   @include flex-center;
   font-size: $font-size-xs;
-  font-weight: $font-weight-bold;
+  font-weight: $font-weight-semibold;
   flex-shrink: 0;
   margin-top: 4rpx;
 }
 
-.previewActionText {
+.actionInput {
   flex: 1;
-  font-size: $font-size-md;
+  font-size: $font-size-sm;
   color: $color-text-primary;
   line-height: $line-height-normal;
+  min-height: 48rpx;
+  padding: 6rpx 0;
 }
 
-.previewHighlight {
-  display: inline-flex;
+.actionDel {
+  font-size: $font-size-lg;
+  color: $color-text-tertiary;
+  padding: 4rpx;
+  flex-shrink: 0;
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm 0;
+}
+
+.checkLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  display: flex;
   align-items: center;
   gap: $spacing-xs;
-  padding: $spacing-xs $spacing-md;
-  background: rgba(255,170,0,0.12);
-  border-radius: $radius-sm;
+}
+
+.checkDot {
+  width: 24rpx;
+  height: 24rpx;
+  border-radius: 50%;
+  border: 2rpx solid $color-border;
+  @include flex-center;
+
+  &.checked {
+    background: $color-primary;
+    border-color: $color-primary;
+    color: $color-text-white;
+    font-size: 18rpx;
+  }
+}
+
+.checkValue {
   font-size: $font-size-sm;
-  color: $color-alert-orange;
   font-weight: $font-weight-semibold;
-  margin-left: 12rpx;
+  color: $color-text-primary;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.checkArrow {
+  color: $color-text-tertiary;
+  font-size: $font-size-md;
+}
+
+.previewCard {
+  background: linear-gradient(180deg, #FAFAFB 0%, #F5F6F7 100%);
+  border-radius: $radius-md;
+  padding: $spacing-lg;
+  border: 1rpx dashed rgba(114,46,209,0.2);
+}
+
+.previewTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-sm;
+  padding-bottom: $spacing-sm;
+  border-bottom: 1rpx solid $color-divider;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.previewBody {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-loose;
+  white-space: pre-wrap;
+}
+
+.previewActions {
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1rpx solid $color-divider;
+
+  li {
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    line-height: $line-height-loose;
+    padding-left: 10rpx;
+  }
 }
 
 .previewFooter {
-  margin-top: $spacing-lg;
-  padding-top: $spacing-md;
-  border-top: 2rpx dashed $color-border;
+  margin-top: $spacing-md;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  padding-top: $spacing-sm;
+  border-top: 1rpx dashed $color-divider;
+}
+
+.historySection {
+  padding: $spacing-sm $page-padding;
+  padding-top: $spacing-xs;
+}
+
+.historyHeader {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md 0;
 }
 
-.previewSender {
+.historyTitle {
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.historyCount {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  padding: 4rpx 12rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-round;
+}
+
+.historyCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  box-shadow: $shadow-card;
+  border: 1rpx solid $color-border;
+  position: relative;
+  overflow: hidden;
+}
+
+.historyHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: $spacing-xs;
+}
+
+.historyIncident {
   font-size: $font-size-sm;
-  color: $color-text-secondary;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  flex: 1;
+  @include text-ellipsis;
+  width: 480rpx;
 }
 
-.copyBar {
+.historyTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-left: $spacing-sm;
+  flex-shrink: 0;
+}
+
+.historyPreview {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: $line-height-normal;
+  @include text-ellipsis-multi(2);
+  margin-bottom: $spacing-sm;
+}
+
+.historyMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.historyMetaLeft {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.historyTag {
+  padding: 2rpx 10rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  background: $color-bg-hover;
+  color: $color-text-tertiary;
+}
+
+.reuseBtn {
+  @include button-reset;
+  padding: 0 $spacing-md;
+  height: 48rpx;
+  background: rgba(114,46,209,0.08);
+  color: #722ED1;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+}
+
+.footerBar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   padding: $spacing-md $page-padding;
   padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
   background: $color-bg-card;
   border-top: 1rpx solid $color-divider;
-  box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.06);
   display: flex;
   gap: $spacing-sm;
   z-index: 100;
 }
 
-.btnSecondary {
+.btnGhost {
   @include button-reset;
   flex: 1;
   height: $button-height-lg;
@@ -376,178 +424,110 @@
   font-size: $font-size-md;
   font-weight: $font-weight-medium;
   border: 1rpx solid $color-border;
+}
 
-  &:active { background: $color-bg-hover; }
+.btnSecondary {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  background: rgba(114,46,209,0.08);
+  color: #722ED1;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
 }
 
 .btnPrimary {
   @include button-reset;
   flex: 2;
   height: $button-height-lg;
-  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  background: linear-gradient(135deg, #722ED1 0%, #9254DE 100%);
   color: $color-text-white;
   border-radius: $radius-button;
   font-size: $font-size-md;
   font-weight: $font-weight-semibold;
-  box-shadow: 0 8rpx 24rpx rgba(180,40,45,0.25);
+  box-shadow: 0 8rpx 24rpx rgba(114,46,209,0.25);
 
   &:active { transform: scale(0.98); }
 }
 
-.historySection {
-  margin-top: $spacing-lg;
-}
-
-.historyTitle {
-  font-size: $font-size-lg;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  margin-bottom: $spacing-md;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.historyCount {
-  font-size: $font-size-sm;
-  color: $color-text-tertiary;
-  font-weight: $font-weight-normal;
-}
-
-.historyCard {
-  background: $color-bg-card;
-  border-radius: $radius-lg;
-  padding: $spacing-md $spacing-lg;
-  box-shadow: $shadow-card;
-  margin-bottom: $spacing-sm;
-  transition: all $transition-base;
-
-  &:active { background: $color-bg-hover; }
-}
-
-.historyHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: $spacing-sm;
-  gap: $spacing-sm;
-}
-
-.historyTitleText {
-  font-size: $font-size-md;
-  font-weight: $font-weight-semibold;
-  color: $color-text-primary;
-  line-height: $line-height-tight;
-  flex: 1;
-  @include text-ellipsis-multi(2);
-}
-
-.historyTime {
-  font-size: $font-size-xs;
-  color: $color-text-tertiary;
-  white-space: nowrap;
-}
-
-.historyPreview {
-  font-size: $font-size-sm;
-  color: $color-text-secondary;
-  line-height: $line-height-normal;
-  @include text-ellipsis-multi(2);
-}
-
-.historyMeta {
-  display: flex;
-  gap: $spacing-sm;
-  margin-top: $spacing-sm;
-  flex-wrap: wrap;
-}
-
-.historyMetaTag {
-  font-size: $font-size-xs;
-  padding: 4rpx 12rpx;
-  border-radius: $radius-xs;
-  background: $color-bg-hover;
-  color: $color-text-tertiary;
-}
-
-.emptyHint {
-  padding: 60rpx $spacing-lg;
+.emptyTip {
+  padding: 80rpx $spacing-xl;
   text-align: center;
   color: $color-text-tertiary;
   font-size: $font-size-md;
   line-height: $line-height-loose;
-}
-
-.pickerMask {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5);
-  z-index: 999;
-}
-
-.pickerSheet {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
   background: $color-bg-card;
-  border-radius: $radius-xl $radius-xl 0 0;
-  padding-bottom: env(safe-area-inset-bottom);
-  z-index: 1000;
-  max-height: 70vh;
-  display: flex;
-  flex-direction: column;
+  border-radius: $radius-lg;
+  margin: $spacing-md $page-padding;
 }
 
-.pickerSheetHeader {
-  padding: $spacing-lg $page-padding;
-  border-bottom: 1rpx solid $color-divider;
+.modalMask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: flex-end;
+  z-index: 1000;
+}
+
+.modalSheet {
+  width: 100%;
+  background: $color-bg-card;
+  border-radius: 24rpx 24rpx 0 0;
+  max-height: 70vh;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.modalHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: $spacing-md $page-padding;
+  border-bottom: 1rpx solid $color-divider;
 }
 
-.pickerSheetTitle {
+.modalTitle {
   font-size: $font-size-lg;
   font-weight: $font-weight-semibold;
   color: $color-text-primary;
 }
 
-.pickerClose {
-  @include button-reset;
-  padding: $spacing-xs $spacing-sm;
+.modalClose {
+  font-size: $font-size-xl;
   color: $color-text-tertiary;
-  font-size: $font-size-md;
+  padding: $spacing-xs;
 }
 
-.pickerSheetList {
-  padding: $spacing-sm $page-padding;
+.modalList {
+  padding: $spacing-sm 0;
   overflow-y: auto;
 }
 
-.pickerSheetItem {
-  @include button-reset;
-  width: 100%;
-  padding: $spacing-md 0;
+.modalItem {
+  padding: $spacing-md $page-padding;
   border-bottom: 1rpx solid $color-divider;
-  justify-content: flex-start;
-  gap: $spacing-sm;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
 
-  &:active { background: $color-bg-hover; }
+  &.active {
+    color: #722ED1;
+    font-weight: $font-weight-semibold;
+    background: rgba(114,46,209,0.04);
+  }
 
   &:last-child { border-bottom: none; }
 }
 
-.pickerSheetItemActive { color: $color-primary; }
-
-.sheetUrgency {
-  width: 12rpx;
-  height: 12rpx;
-  border-radius: 50%;
-  flex-shrink: 0;
+.modalItemMeta {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+  font-weight: $font-weight-regular;
 }
 
-.sheetTitle {
-  flex: 1;
-  font-size: $font-size-md;
-  text-align: left;
-  @include text-ellipsis;
+.formatTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
 }

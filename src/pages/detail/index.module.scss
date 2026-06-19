@@ -92,6 +92,28 @@
   color: rgba(255,255,255,0.85);
 }
 
+.judgeInfo {
+  display: flex;
+  gap: $spacing-sm;
+  flex-wrap: wrap;
+  margin-top: -$spacing-xs;
+  margin-bottom: $spacing-sm;
+  position: relative;
+  z-index: 1;
+}
+
+.judgeTag {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+}
+
+.judgePending { background: rgba(134,144,156,0.25); color: #C9CDD4; }
+.judgeExaggerate { background: rgba(255,125,0,0.25); color: #FFBE80; }
+.judgeOldnews { background: rgba(22,93,255,0.25); color: #B8D0FF; }
+.judgeMalicious { background: rgba(245,63,63,0.3); color: #FFB8B8; }
+
 .summary {
   font-size: $font-size-md;
   line-height: $line-height-loose;

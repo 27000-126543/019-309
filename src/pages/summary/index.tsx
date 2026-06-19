@@ -1,375 +1,377 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, Button, Textarea, ScrollView, Input } from '@tarojs/components';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, Button, ScrollView, Textarea, Input } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
-import { mockIncidents, mockSyncTemplates } from '@/data/mockSentiment';
-import { Incident, SyncTemplate, URGENCY_LABELS } from '@/types/sentiment';
-
-const TIME_OPTIONS = [
-  { key: '30m', label: '30分钟后', minutes: 30 },
-  { key: '1h', label: '1小时后', minutes: 60 },
-  { key: '2h', label: '2小时后（下午盘前）', minutes: 120 },
-  { key: '4h', label: '4小时后（收盘后）', minutes: 240 },
-  { key: '1d', label: '明天同一时间', minutes: 1440 }
-];
-
-const urgencyColorMap: Record<string, string> = {
-  critical: '#F53F3F',
-  high: '#FF7D00',
-  medium: '#FFAA00',
-  low: '#00B42A'
-};
+import { useSentimentStore } from '@/store/useSentimentStore';
+import {
+  Incident,
+  IncidentCategory,
+  SyncTemplate,
+  CATEGORY_LABELS,
+  URGENCY_LABELS,
+  CATEGORY_TEMPLATES
+} from '@/types/sentiment';
 
 const SummaryPage: React.FC = () => {
-  const [incidents] = useState<Incident[]>(mockIncidents);
-  const [selectedIncidentId, setSelectedIncidentId] = useState<string | null>(
-    mockSyncTemplates.length > 0 ? null : null
-  );
-  const [showPicker, setShowPicker] = useState(false);
+  const incidents = useSentimentStore((s) => s.incidents);
+  const syncTemplates = useSentimentStore((s) => s.syncTemplates);
+  const getMergedFeedback = useSentimentStore((s) => s.getMergedFeedback);
+  const addSyncTemplate = useSentimentStore((s) => s.addSyncTemplate);
 
-  const [progress, setProgress] = useState('');
-  const [actions, setActions] = useState<string[]>(['', '']);
-  const [selectedTimeKey, setSelectedTimeKey] = useState<string>('1h');
-  const [customTime, setCustomTime] = useState('');
-  const [templates, setTemplates] = useState<SyncTemplate[]>(mockSyncTemplates);
+  const [selectedId, setSelectedId] = useState<string>(incidents[0]?.id || '');
+  const [pickerVisible, setPickerVisible] = useState(false);
 
-  useDidShow(() => {
-    if (templates.length > 0 && !selectedIncidentId && progress === '') {
-      const latest = templates[0];
-      setSelectedIncidentId(latest.incidentId);
-      setProgress(latest.progress);
-      setActions(latest.suggestedActions.length > 0 ? latest.suggestedActions : ['', '']);
-    }
-  });
+  const [progressText, setProgressText] = useState<string>('');
+  const [actions, setActions] = useState<string[]>([]);
+  const [nextCheckTime, setNextCheckTime] = useState<string>('');
 
-  const selectedIncident = useMemo(
-    () => incidents.find((i) => i.id === selectedIncidentId) || null,
-    [incidents, selectedIncidentId]
+  const incident: Incident | undefined = useMemo(
+    () => incidents.find((i) => i.id === selectedId),
+    [incidents, selectedId]
   );
 
-  const nextCheckTime = useMemo(() => {
-    if (customTime.trim()) return customTime;
-    const opt = TIME_OPTIONS.find((o) => o.key === selectedTimeKey);
-    if (!opt) return '1小时后';
-    const date = new Date(Date.now() + opt.minutes * 60 * 1000);
-    return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-  }, [selectedTimeKey, customTime]);
+  const category: IncidentCategory = incident?.category || 'media';
+  const tplConfig = CATEGORY_TEMPLATES[category];
 
-  const generateContent = () => {
-    const lines: string[] = [];
-    lines.push('【舆情对内同步】');
-    lines.push('');
-    if (selectedIncident) {
-      lines.push(`事项：${selectedIncident.title}`);
-      lines.push(`紧急等级：${URGENCY_LABELS[selectedIncident.urgency]} | 当前热度：${selectedIncident.heat.toLocaleString()}`);
-      lines.push('');
-    }
-    lines.push('一、事情进展：');
-    lines.push(progress || '（待填写）');
-    lines.push('');
-    const validActions = actions.filter((a) => a.trim());
-    lines.push('二、建议动作：');
-    if (validActions.length > 0) {
-      validActions.forEach((a, i) => lines.push(`  ${i + 1}. ${a}`));
-    } else {
-      lines.push('  （待填写）');
-    }
-    lines.push('');
-    lines.push(`三、下一次观察时间：${nextCheckTime}`);
-    lines.push('');
-    lines.push(`——品牌公关部 ${new Date().toLocaleDateString('zh-CN')}`);
-    return lines.join('\n');
+  const resetForm = (inc: Incident) => {
+    const merged = getMergedFeedback(inc);
+    const factsParts = [merged.factStatement, merged.publicStatement]
+      .filter(Boolean)
+      .map((s) => s.replace(/\n+/g, ' ').slice(0, 80))
+      .join(' ');
+
+    const defaultProgress = factsParts
+      ? `${factsParts}。${tplConfig.progressTemplate}`
+      : tplConfig.progressTemplate;
+
+    setProgressText(defaultProgress);
+    setActions([...tplConfig.suggestedActions]);
+
+    const defaultNext = new Date(Date.now() + tplConfig.defaultNextCheckMinutes * 60 * 1000);
+    const nextStr = `${defaultNext.getMonth() + 1}月${defaultNext.getDate()}日 ${String(defaultNext.getHours()).padStart(2, '0')}:${String(defaultNext.getMinutes()).padStart(2, '0')}`;
+    setNextCheckTime(nextStr);
   };
 
-  const templateContent = useMemo(() => generateContent(), [selectedIncident, progress, actions, nextCheckTime]);
+  useDidShow(() => {
+    const fresh = incidents.find((i) => i.id === selectedId);
+    if (fresh) resetForm(fresh);
+    console.log('[Summary] 页面展示，当前事项:', selectedId, '模板条数:', syncTemplates.length);
+  });
 
-  const addAction = () => setActions([...actions, '']);
+  useEffect(() => {
+    if (incident && !progressText) resetForm(incident);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, incident?.id]);
 
-  const updateAction = (idx: number, value: string) => {
+  void syncTemplates;
+
+  if (!incident) {
+    return (
+      <ScrollView className={styles.page}>
+        <View className={styles.emptyTip}>暂无正在处理的事项</View>
+      </ScrollView>
+    );
+  }
+
+  const handleAddAction = () => {
+    setActions([...actions, '']);
+  };
+
+  const handleActionChange = (idx: number, val: string) => {
     const next = [...actions];
-    next[idx] = value;
+    next[idx] = val;
     setActions(next);
   };
 
-  const removeAction = (idx: number) => {
+  const handleActionDel = (idx: number) => {
     if (actions.length <= 1) return;
-    setActions(actions.filter((_, i) => i !== idx));
+    const next = actions.filter((_, i) => i !== idx);
+    setActions(next);
   };
 
-  const canCopy = progress.trim().length > 0 || actions.some((a) => a.trim());
+  const handleGenerate = () => {
+    if (!progressText.trim()) {
+      Taro.showToast({ title: '请填写进展说明', icon: 'none' });
+      return;
+    }
+    if (actions.filter((a) => a.trim()).length === 0) {
+      Taro.showToast({ title: '请至少填写一条建议动作', icon: 'none' });
+      return;
+    }
+    addSyncTemplate({
+      incidentId: incident.id,
+      incidentTitle: incident.title,
+      category: incident.category,
+      progressText: progressText.trim(),
+      suggestedActions: actions.filter((a) => a.trim()),
+      nextCheckTime: nextCheckTime.trim() || '待确认',
+      factStatement: getMergedFeedback(incident).factStatement,
+      publicStatement: getMergedFeedback(incident).publicStatement,
+      noResponseBoundary: getMergedFeedback(incident).noResponseBoundary
+    });
+    Taro.showToast({ title: '同步模板已生成', icon: 'success' });
+  };
+
+  const handleReuse = (tpl: SyncTemplate) => {
+    setSelectedId(tpl.incidentId);
+    setProgressText(tpl.progressText);
+    setActions([...tpl.suggestedActions]);
+    setNextCheckTime(tpl.nextCheckTime);
+    Taro.showToast({ title: `已复用「${tpl.incidentTitle.slice(0, 10)}」的同步模板`, icon: 'none' });
+  };
 
   const handleCopy = () => {
-    if (!canCopy) {
-      Taro.showToast({ title: '请先填写进展或建议动作', icon: 'none' });
-      return;
-    }
+    const actionStr = actions
+      .filter((a) => a.trim())
+      .map((a, i) => `${i + 1}. ${a}`)
+      .join('\n');
+    const final =
+      `【舆情同步】${incident.title}\n\n` +
+      `📌 事项进展：\n${progressText}\n\n` +
+      `🎯 建议动作：\n${actionStr}\n\n` +
+      `⏰ 下次观察：${nextCheckTime}\n\n` +
+      `—— 值班内同步，请勿外传`;
     Taro.setClipboardData({
-      data: templateContent,
-      success: () => {
-        Taro.showToast({ title: '已复制到剪贴板', icon: 'success' });
-      }
+      data: final,
+      success: () => Taro.showToast({ title: '已复制到剪贴板', icon: 'success' })
     });
-    console.log('[Summary] 复制同步模板:', templateContent);
   };
 
-  const handleSave = () => {
-    if (!canCopy || !selectedIncident) {
-      Taro.showToast({ title: '请完善内容后再保存', icon: 'none' });
-      return;
-    }
-    const newTpl: SyncTemplate = {
-      id: `SYNC-${String(templates.length + 1).padStart(3, '0')}`,
-      incidentId: selectedIncident.id,
-      incidentTitle: selectedIncident.title,
-      generatedAt: new Date().toISOString(),
-      progress,
-      suggestedActions: actions.filter((a) => a.trim()),
-      nextCheckTime,
-      content: templateContent
-    };
-    setTemplates([newTpl, ...templates]);
-    Taro.showToast({ title: '已保存至历史记录', icon: 'success' });
-  };
-
-  const formatDateTime = (iso: string) => {
+  const formatTime = (iso: string) => {
     const d = new Date(iso);
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
+  const historyForCurrent = syncTemplates.filter((t) => t.incidentId === incident.id);
+  const historyAll = syncTemplates;
+
   return (
     <ScrollView scrollY className={styles.page} enhanced showScrollbar={false}>
-      <View className={styles.incidentPicker}>
-        <Text className={styles.pickerLabel}>选择需同步的事项</Text>
-        <Button className={styles.pickerBtn} onClick={() => setShowPicker(true)}>
-          {selectedIncident ? (
-            <Text className={styles.pickerTitle}>{selectedIncident.title}</Text>
-          ) : (
-            <Text className={styles.pickerEmpty}>点击选择事项（可选）</Text>
-          )}
+      <View className={styles.topBar}>
+        <View
+          className={styles.incidentPicker}
+          onClick={() => setPickerVisible(true)}
+        >
+          <View className={styles.pickerInfo}>
+            <Text className={styles.pickerTitle}>{incident.title}</Text>
+            <Text className={styles.pickerMeta}>
+              {incident.id} · {CATEGORY_LABELS[incident.category]} · {URGENCY_LABELS[incident.urgency]}
+            </Text>
+          </View>
           <Text className={styles.pickerArrow}>›</Text>
-        </Button>
+        </View>
       </View>
 
       <View className={styles.content}>
-        <View className={styles.formCard}>
-          <View className={styles.cardTitle}>
-            <View className={styles.cardBadge}>1</View>
-            <Text>事情进展</Text>
-          </View>
-          <Text className={styles.fieldLabel}>目前进展描述</Text>
-          <Text className={styles.fieldHint}>
-            客观陈述已核实的事实、已采取的动作、各部门反馈情况，不要加入主观判断
-          </Text>
-          <Textarea
-            className={styles.textarea}
-            value={progress}
-            placeholder="例：经核实，XX事项属实/部分属实/不属实。法务部已完成XX，业务部门正在XX，预计XX时间有进一步结果。"
-            onInput={(e) => setProgress(e.detail.value)}
-            maxlength={2000}
-            autoHeight
-          />
-        </View>
-
-        <View className={styles.formCard}>
-          <View className={styles.cardTitle}>
-            <View className={styles.cardBadge}>2</View>
-            <Text>建议动作</Text>
-          </View>
-          <Text className={styles.fieldLabel}>后续需执行的动作清单</Text>
-          <Text className={styles.fieldHint}>每条动作包含：具体事项 + 责任人/部门 + 时间节点</Text>
-
-          <View className={styles.actionList}>
-            {actions.map((act, i) => (
-              <View key={i} className={styles.actionItem}>
-                <View className={styles.actionIndex}>{i + 1}</View>
-                <Input
-                  className={styles.actionInput}
-                  value={act}
-                  placeholder={`动作${i + 1}：如 14:00前 在官方微博发布声明`}
-                  onInput={(e) => updateAction(i, e.detail.value)}
-                />
-                {actions.length > 1 && (
-                  <Button className={styles.actionRemove} onClick={() => removeAction(i)}>
-                    ×
-                  </Button>
-                )}
-              </View>
-            ))}
-          </View>
-
-          <Button className={styles.addActionBtn} onClick={addAction}>
-            + 添加一条动作
-          </Button>
-        </View>
-
-        <View className={styles.formCard}>
-          <View className={styles.cardTitle}>
-            <View className={styles.cardBadge}>3</View>
-            <Text>下一次观察时间</Text>
-          </View>
-          <View className={styles.timeSection}>
-            <View className={styles.timeOptions}>
-              {TIME_OPTIONS.map((opt) => (
-                <Button
-                  key={opt.key}
-                  className={classnames(
-                    styles.timeOpt,
-                    selectedTimeKey === opt.key && !customTime && styles.timeOptActive
-                  )}
-                  onClick={() => {
-                    setSelectedTimeKey(opt.key);
-                    setCustomTime('');
-                  }}
-                >
-                  {opt.label}
-                </Button>
-              ))}
+        <View className={styles.sectionCard}>
+          <View className={styles.sectionHeader}>
+            <View className={styles.sectionTitle}>
+              <View className={styles.sectionIcon}>📝</View>
+              <Text>进展说明</Text>
             </View>
-            <Text className={styles.fieldLabel} style={{ marginTop: '8rpx' }}>
-              或自定义时间：
-            </Text>
-            <Input
-              className={styles.customTime}
-              value={customTime}
-              placeholder="例：6月19日 15:00（收盘复盘）"
-              onInput={(e) => setCustomTime(e.detail.value)}
+            <View className={styles.badge}>{CATEGORY_LABELS[incident.category]}模板</View>
+          </View>
+          <Text className={styles.categoryNote}>
+            已根据「{CATEGORY_LABELS[incident.category]}」类型预置模板，并自动带出协同页填写的事实和口径
+          </Text>
+          <View className={styles.field}>
+            <View className={styles.fieldLabel}>
+              <Text>当前进展汇总</Text>
+              <Text className={styles.fieldHint}>适合复制到内部群</Text>
+            </View>
+            <Textarea
+              value={progressText}
+              onInput={(e) => setProgressText(e.detail.value)}
+              className={styles.textarea}
+              placeholder="请描述当前事项进展..."
+              maxlength={1000}
+              autoHeight
             />
           </View>
         </View>
 
-        <View className={styles.previewCard}>
-          <View className={styles.previewHeader}>
-            <View className={styles.previewTitleBlock}>
-              <View className={styles.previewTag}>对内同步 · 实时预览</View>
-              <Text className={styles.previewMainTitle}>
-                {selectedIncident ? selectedIncident.title : '（未关联具体事项）'}
-              </Text>
+        <View className={styles.sectionCard}>
+          <View className={styles.sectionHeader}>
+            <View className={styles.sectionTitle}>
+              <View className={styles.sectionIcon}>🎯</View>
+              <Text>建议动作</Text>
             </View>
-            <Text className={styles.previewTime}>{formatDateTime(new Date().toISOString())}</Text>
           </View>
+          <View className={styles.actionsHeader}>
+            <Text className={styles.fieldHint}>
+              已预置 {tplConfig.suggestedActions.length} 条场景化建议，可自由增删
+            </Text>
+            <Button className={styles.addActionBtn} onClick={handleAddAction}>
+              + 新增
+            </Button>
+          </View>
+          <View className={styles.actionList}>
+            {actions.map((a, i) => (
+              <View key={i} className={styles.actionItem}>
+                <View className={styles.actionNum}>{i + 1}</View>
+                <Textarea
+                  value={a}
+                  onInput={(e) => handleActionChange(i, e.detail.value)}
+                  className={styles.actionInput}
+                  placeholder="请输入建议动作..."
+                  maxlength={200}
+                  autoHeight
+                />
+                {actions.length > 1 && (
+                  <Text className={styles.actionDel} onClick={() => handleActionDel(i)}>
+                    ×
+                  </Text>
+                )}
+              </View>
+            ))}
+          </View>
+        </View>
 
-          <View className={styles.previewSection}>
-            <Text className={styles.previewSectionTitle}>事情进展</Text>
-            <Text className={styles.previewText}>
-              {progress || '（请在上方填写当前进展情况）'}
+        <View className={styles.sectionCard}>
+          <View className={styles.sectionHeader}>
+            <View className={styles.sectionTitle}>
+              <View className={styles.sectionIcon}>⏰</View>
+              <Text>下一次观察时间</Text>
+            </View>
+          </View>
+          <Text className={styles.categoryNote}>
+            「{CATEGORY_LABELS[incident.category]}」类默认建议 {tplConfig.defaultNextCheckMinutes} 分钟后观察
+          </Text>
+          <View className={styles.field}>
+            <View className={styles.fieldLabel}>
+              <Text>下次观察节点</Text>
+            </View>
+            <Input
+              value={nextCheckTime}
+              onInput={(e) => setNextCheckTime(e.detail.value)}
+              className={styles.textarea}
+              placeholder="例如：6月12日 15:30"
+            />
+          </View>
+        </View>
+
+        <View className={styles.sectionCard}>
+          <View className={styles.sectionHeader}>
+            <View className={styles.sectionTitle}>
+              <View className={styles.sectionIcon}>👁</View>
+              <Text>同步模板预览</Text>
+            </View>
+          </View>
+          <View className={styles.previewCard}>
+            <View className={styles.previewTitle}>
+              <Text>【舆情同步】{incident.title}</Text>
+            </View>
+            <Text className={styles.previewBody}>
+              📌 事项进展：{'\n'}
+              {progressText || '（待填写）'}
+            </Text>
+            <View className={styles.previewActions}>
+              <Text style={{ fontSize: '26rpx', color: '#86909C', marginBottom: '12rpx', display: 'block' }}>
+                🎯 建议动作：
+              </Text>
+              {actions.filter((a) => a.trim()).map((a, i) => (
+                <Text key={i} selectable>
+                  {i + 1}. {a}{'\n'}
+                </Text>
+              ))}
+              {actions.filter((a) => a.trim()).length === 0 && (
+                <Text style={{ fontSize: '26rpx', color: '#86909C' }}>（暂无）</Text>
+              )}
+            </View>
+            <Text className={styles.previewFooter}>
+              ⏰ 下次观察：{nextCheckTime || '待确认'}
+              {'\n'}
+              —— 值班内同步，请勿外传
             </Text>
           </View>
-
-          <View className={styles.previewSection}>
-            <Text className={styles.previewSectionTitle}>建议动作</Text>
-            {actions.filter((a) => a.trim()).length > 0 ? (
-              actions
-                .filter((a) => a.trim())
-                .map((a, i) => (
-                  <View key={i} className={styles.previewActionItem}>
-                    <View className={styles.previewActionNum}>{i + 1}</View>
-                    <Text className={styles.previewActionText}>{a}</Text>
-                  </View>
-                ))
-            ) : (
-              <Text className={styles.previewText} style={{ color: '#86909C' }}>
-                （请在上方填写建议动作）
-              </Text>
-            )}
-          </View>
-
-          <View className={styles.previewSection}>
-            <Text className={styles.previewSectionTitle}>下一次观察时间</Text>
-            <View className={styles.previewHighlight}>⏰ {nextCheckTime}</View>
-          </View>
-
-          <View className={styles.previewFooter}>
-            <Text className={styles.previewSender}>—— 品牌公关部值班组</Text>
-            <Text className={styles.previewSender}>仅内部同步，请勿外传</Text>
-          </View>
         </View>
+      </View>
 
-        <View className={styles.historySection}>
+      <View className={styles.historySection}>
+        <View className={styles.historyHeader}>
           <View className={styles.historyTitle}>
-            <Text>历史同步记录</Text>
-            <Text className={styles.historyCount}>共 {templates.length} 条</Text>
+            <Text>📚 历史同步记录</Text>
           </View>
-          {templates.length > 0 ? (
-            templates.map((t) => (
-              <View key={t.id} className={styles.historyCard}>
-                <View className={styles.historyHead}>
-                  <Text className={styles.historyTitleText}>{t.incidentTitle}</Text>
-                  <Text className={styles.historyTime}>{formatDateTime(t.generatedAt)}</Text>
-                </View>
-                <Text className={styles.historyPreview}>{t.progress}</Text>
-                <View className={styles.historyMeta}>
-                  <View className={styles.historyMetaTag}>
-                    {t.suggestedActions.length} 项动作
-                  </View>
-                  <View className={styles.historyMetaTag}>下次观察 {formatDateTime(t.nextCheckTime)}</View>
-                </View>
-              </View>
-            ))
-          ) : (
-            <View className={styles.emptyHint}>暂无历史记录{'\n'}填写完成后保存即可出现在此处</View>
-          )}
+          <View className={styles.historyCount}>{historyAll.length} 条</View>
         </View>
-      </View>
-
-      <View className={styles.copyBar}>
-        <Button className={styles.btnSecondary} onClick={handleSave}>
-          保存记录
-        </Button>
-        <Button className={styles.btnPrimary} onClick={handleCopy}>
-          复制同步文案
-        </Button>
-      </View>
-
-      {showPicker && (
-        <>
-          <View className={styles.pickerMask} onClick={() => setShowPicker(false)} />
-          <View className={styles.pickerSheet}>
-            <View className={styles.pickerSheetHeader}>
-              <Text className={styles.pickerSheetTitle}>选择事项</Text>
-              <Button className={styles.pickerClose} onClick={() => setShowPicker(false)}>
-                关闭
-              </Button>
+        {historyAll.length === 0 ? (
+          <View className={styles.emptyTip}>暂无历史同步记录，保存后可在此复用</View>
+        ) : (
+          historyAll.map((tpl) => (
+            <View key={tpl.id} className={styles.historyCard}>
+              <View className={styles.historyHead}>
+                <Text className={styles.historyIncident}>{tpl.incidentTitle}</Text>
+                <Text className={styles.historyTime}>{formatTime(tpl.generatedAt)}</Text>
+              </View>
+              <Text className={styles.historyPreview}>{tpl.progressText}</Text>
+              <View className={styles.historyMeta}>
+                <View className={styles.historyMetaLeft}>
+                  <View className={styles.historyTag}>{CATEGORY_LABELS[tpl.category]}</View>
+                  <View className={styles.historyTag}>{tpl.suggestedActions.length} 项动作</View>
+                  <View className={styles.historyTag}>by {tpl.generatedBy}</View>
+                </View>
+                <Button className={styles.reuseBtn} onClick={() => handleReuse(tpl)}>
+                  复用
+                </Button>
+              </View>
             </View>
-            <ScrollView scrollY className={styles.pickerSheetList}>
-              <Button
-                className={classnames(
-                  styles.pickerSheetItem,
-                  !selectedIncidentId && styles.pickerSheetItemActive
-                )}
-                onClick={() => {
-                  setSelectedIncidentId(null);
-                  setShowPicker(false);
-                }}
-              >
-                <View className={styles.sheetUrgency} style={{ background: '#C9CDD4' }} />
-                <Text className={styles.sheetTitle}>不关联具体事项（通用模板）</Text>
-              </Button>
+          ))
+        )}
+        {historyForCurrent.length > 0 && historyForCurrent.length !== historyAll.length && (
+          <Text style={{ fontSize: '22rpx', color: '#86909C', padding: '16rpx', textAlign: 'center' }}>
+            当前事项已生成 {historyForCurrent.length} 份同步
+          </Text>
+        )}
+      </View>
+
+      <View className={styles.footerBar}>
+        <Button
+          className={styles.btnGhost}
+          onClick={() => Taro.switchTab({ url: '/pages/index/index' })}
+        >
+          返回值班本
+        </Button>
+        <Button className={styles.btnSecondary} onClick={handleCopy}>
+          复制
+        </Button>
+        <Button className={styles.btnPrimary} onClick={handleGenerate}>
+          生成同步
+        </Button>
+      </View>
+
+      {pickerVisible && (
+        <View className={styles.modalMask} onClick={() => setPickerVisible(false)}>
+          <View className={styles.modalSheet} onClick={(e) => e.stopPropagation && e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>选择事项</Text>
+              <Text className={styles.modalClose} onClick={() => setPickerVisible(false)}>
+                ×
+              </Text>
+            </View>
+            <ScrollView scrollY className={styles.modalList} enhanced showScrollbar={false}>
               {incidents.map((inc) => (
-                <Button
+                <View
                   key={inc.id}
-                  className={classnames(
-                    styles.pickerSheetItem,
-                    selectedIncidentId === inc.id && styles.pickerSheetItemActive
-                  )}
+                  className={classnames(styles.modalItem, inc.id === selectedId && styles.active)}
                   onClick={() => {
-                    setSelectedIncidentId(inc.id);
-                    if (inc.factStatement) setProgress(inc.factStatement);
-                    setShowPicker(false);
+                    setSelectedId(inc.id);
+                    setPickerVisible(false);
+                    setTimeout(() => {
+                      const fresh = useSentimentStore.getState().incidents.find((i) => i.id === inc.id);
+                      if (fresh) resetForm(fresh);
+                    }, 50);
                   }}
                 >
-                  <View
-                    className={styles.sheetUrgency}
-                    style={{ background: urgencyColorMap[inc.urgency] }}
-                  />
-                  <Text className={styles.sheetTitle}>
-                    {URGENCY_LABELS[inc.urgency]} · {inc.title}
-                  </Text>
-                </Button>
+                  <Text>{inc.title}</Text>
+                  <View className={styles.modalItemMeta}>
+                    {inc.id} · {CATEGORY_LABELS[inc.category]} · {URGENCY_LABELS[inc.urgency]}
+                  </View>
+                </View>
               ))}
             </ScrollView>
           </View>
-        </>
+        </View>
       )}
     </ScrollView>
   );

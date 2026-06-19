@@ -1,4 +1,4 @@
 export default definePageConfig({
   navigationBarTitleText: '协同派单',
-  enablePullDownRefresh: true
+  enablePullDownRefresh: false
 });

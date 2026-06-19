@@ -1,16 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, Button, ScrollView } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import IncidentCard from '@/components/IncidentCard';
-import { mockIncidents } from '@/data/mockSentiment';
+import { useSentimentStore } from '@/store/useSentimentStore';
 import { Incident, IncidentCategory, CATEGORY_LABELS } from '@/types/sentiment';
 
 type FilterType = 'all' | IncidentCategory;
 
 const IndexPage: React.FC = () => {
-  const [incidents, setIncidents] = useState<Incident[]>(mockIncidents);
+  const incidents = useSentimentStore((s) => s.incidents);
   const [filter, setFilter] = useState<FilterType>('all');
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -19,9 +19,13 @@ const IndexPage: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  useDidShow(() => {
+    console.log('[IndexPage] 页面展示，当前事项数:', incidents.length);
+  });
+
   const filtered = useMemo(() => {
     let list = filter === 'all' ? incidents : incidents.filter((i) => i.category === filter);
-    const urgencyOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    const urgencyOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
     return [...list].sort((a, b) => {
       const ua = urgencyOrder[a.urgency];
       const ub = urgencyOrder[b.urgency];
@@ -82,7 +86,7 @@ const IndexPage: React.FC = () => {
           </View>
           <View className={styles.dutyInfo}>
             <Text className={styles.dutyLabel}>当前值班</Text>
-            <Text className={styles.dutyName}>张经理 · 品牌公关部</Text>
+            <Text className={styles.dutyName}>{useSentimentStore.getState().currentUser} · 品牌公关部</Text>
           </View>
         </View>
 

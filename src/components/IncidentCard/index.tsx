@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text } from '@tarojs/components';
 import classnames from 'classnames';
 import styles from './index.module.scss';
@@ -7,7 +7,8 @@ import {
   CATEGORY_LABELS,
   URGENCY_LABELS,
   JUDGE_LABELS,
-  DEPT_LABELS
+  DEPT_LABELS,
+  DeptFeedback
 } from '@/types/sentiment';
 
 interface IncidentCardProps {
@@ -31,7 +32,7 @@ const getTrendText = (trend: string) => {
 
 const STATUS_LABELS: Record<string, string> = {
   open: '待处理',
-  assigned: '已派单',
+  assigned: '协同中',
   confirmed: '已核实',
   closed: '已归档'
 };
@@ -63,6 +64,14 @@ const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onClick }) => {
     confirmed: styles.statusConfirmed,
     closed: styles.statusClosed
   };
+
+  const { activeDepts, submittedCount } = useMemo(() => {
+    const list = (Object.values(incident.feedbacks).filter(Boolean) as DeptFeedback[]);
+    return {
+      activeDepts: list,
+      submittedCount: list.filter((f) => f.status === 'submitted').length
+    };
+  }, [incident.feedbacks]);
 
   return (
     <View
@@ -111,13 +120,25 @@ const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onClick }) => {
         <Text className={styles.timeInfo}>
           首发于 {formatTime(incident.firstReportedAt)}
         </Text>
-        {incident.assignees.length > 0 ? (
+        {activeDepts.length > 0 ? (
           <View className={styles.assigneeList}>
-            {incident.assignees.map((dept) => (
-              <View key={dept} className={styles.assigneeTag}>
-                {DEPT_LABELS[dept]}
+            {activeDepts.map((f) => (
+              <View
+                key={f.dept}
+                className={classnames(
+                  styles.assigneeTag,
+                  f.status === 'submitted' && styles.assigneeTagDone
+                )}
+              >
+                {DEPT_LABELS[f.dept]}
+                {f.status === 'submitted' ? ' ✓' : f.status === 'in_progress' ? ' ···' : ''}
               </View>
             ))}
+            {submittedCount > 0 && (
+              <View className={styles.progressTag}>
+                {submittedCount}/{activeDepts.length} 已反馈
+              </View>
+            )}
           </View>
         ) : (
           <View className={classnames(styles.statusTag, statusMap[incident.status])}>

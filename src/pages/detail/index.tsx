@@ -1,38 +1,50 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { View, Text, Button, ScrollView, Image } from '@tarojs/components';
 import Taro, { useRouter, useDidShow } from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import TrendChart from '@/components/TrendChart';
 import TagPanel from '@/components/TagPanel';
-import { mockIncidents } from '@/data/mockSentiment';
+import DisposalTimeline from '@/components/DisposalTimeline';
+import { useSentimentStore } from '@/store/useSentimentStore';
 import {
   Incident,
   JudgeTag,
   CATEGORY_LABELS,
-  URGENCY_LABELS
+  URGENCY_LABELS,
+  JUDGE_LABELS
 } from '@/types/sentiment';
 
 const DetailPage: React.FC = () => {
   const router = useRouter();
-  const incidentId = router.params.id || mockIncidents[0].id;
+  const paramId = router.params.id as string;
+  const incidents = useSentimentStore((s) => s.incidents);
+  const setJudge = useSentimentStore((s) => s.setJudge);
 
-  const [incidents, setIncidents] = useState<Incident[]>(mockIncidents);
-  const incident = useMemo(
-    () => incidents.find((i) => i.id === incidentId) || mockIncidents[0],
-    [incidents, incidentId]
+  const incident: Incident | undefined = useSentimentStore((s) =>
+    s.incidents.find((i) => i.id === paramId) || s.incidents[0]
   );
 
-  const [localJudge, setLocalJudge] = useState<JudgeTag | null>(incident.judgeTag);
-  const [localNote, setLocalNote] = useState<string>(incident.judgeNote);
+  const fallbackId = incident?.id || 'INC-001';
+  const [localJudge, setLocalJudge] = useState<JudgeTag | null>(incident?.judgeTag ?? null);
+  const [localNote, setLocalNote] = useState<string>(incident?.judgeNote ?? '');
 
   useDidShow(() => {
-    const inc = incidents.find((i) => i.id === incidentId);
-    if (inc) {
-      setLocalJudge(inc.judgeTag);
-      setLocalNote(inc.judgeNote);
+    const fresh = useSentimentStore.getState().getIncident(fallbackId);
+    if (fresh) {
+      setLocalJudge(fresh.judgeTag);
+      setLocalNote(fresh.judgeNote);
     }
+    console.log('[Detail] 页面展示，事项ID:', fallbackId);
   });
+
+  if (!incident) {
+    return (
+      <ScrollView className={styles.page}>
+        <View className={styles.emptyTip}>事项不存在</View>
+      </ScrollView>
+    );
+  }
 
   const urgencyMap: Record<string, string> = {
     critical: styles.urgencyCritical,
@@ -45,6 +57,13 @@ const DetailPage: React.FC = () => {
     media: styles.catMedia,
     investor: styles.catInvestor,
     complaint: styles.catComplaint
+  };
+
+  const judgeMap: Record<string, string> = {
+    pending: styles.judgePending,
+    exaggerate: styles.judgeExaggerate,
+    oldnews: styles.judgeOldnews,
+    malicious: styles.judgeMalicious
   };
 
   const trendText =
@@ -61,32 +80,23 @@ const DetailPage: React.FC = () => {
     return `${Math.floor(diff / 86400)}天前首发`;
   };
 
-  const handleJudgeChange = (tag: JudgeTag | null) => {
-    setLocalJudge(tag);
-  };
-
   const handleSave = () => {
-    const updated = incidents.map((i) =>
-      i.id === incidentId
-        ? { ...i, judgeTag: localJudge, judgeNote: localNote }
-        : i
-    );
-    setIncidents(updated);
+    setJudge(incident.id, localJudge, localNote);
     Taro.showToast({ title: '初判结果已保存', icon: 'success' });
-    console.log('[Detail] 初判已保存:', { id: incidentId, judge: localJudge, note: localNote });
   };
 
   const handleCollaborate = () => {
-    if (localJudge) {
-      const updated = incidents.map((i) =>
-        i.id === incidentId
-          ? { ...i, judgeTag: localJudge, judgeNote: localNote }
-          : i
-      );
-      setIncidents(updated);
+    if (localJudge !== incident.judgeTag || localNote !== incident.judgeNote) {
+      setJudge(incident.id, localJudge, localNote);
     }
     Taro.switchTab({ url: '/pages/collaborate/index' });
   };
+
+  const handleSync = () => {
+    Taro.switchTab({ url: '/pages/summary/index' });
+  };
+
+  void incidents; // 保持响应式订阅
 
   return (
     <ScrollView scrollY className={styles.page} enhanced showScrollbar={false}>
@@ -112,11 +122,26 @@ const DetailPage: React.FC = () => {
           </View>
         </View>
 
+        {incident.judgeTag && (
+          <View className={styles.judgeInfo}>
+            <View className={classnames(styles.judgeTag, judgeMap[incident.judgeTag])}>
+              初判：{JUDGE_LABELS[incident.judgeTag]}
+            </View>
+            {incident.judgedBy && (
+              <View className={classnames(styles.metaTag, styles.trendTag)}>
+                by {incident.judgedBy}
+              </View>
+            )}
+          </View>
+        )}
+
         <Text className={styles.summary}>{incident.summary}</Text>
       </View>
 
       <View className={styles.content}>
         <TrendChart points={incident.trendPoints} currentHeat={incident.heat} />
+
+        <DisposalTimeline incident={incident} />
 
         <View className={styles.sectionCard}>
           <View className={styles.sectionTitle}>
@@ -203,7 +228,7 @@ const DetailPage: React.FC = () => {
         <TagPanel
           value={localJudge}
           note={localNote}
-          onChange={handleJudgeChange}
+          onChange={setLocalJudge}
           onNoteChange={setLocalNote}
         />
       </View>
@@ -212,7 +237,7 @@ const DetailPage: React.FC = () => {
         <Button className={styles.btnGhost} onClick={handleSave}>
           保存初判
         </Button>
-        <Button className={styles.btnSecondary} onClick={() => Taro.switchTab({ url: '/pages/summary/index' })}>
+        <Button className={styles.btnSecondary} onClick={handleSync}>
           生成同步
         </Button>
         <Button className={styles.btnPrimary} onClick={handleCollaborate}>

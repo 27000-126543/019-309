@@ -1,7 +1,45 @@
-import { Incident, SyncTemplate } from '@/types/sentiment';
+import { Incident, SyncTemplate, DeptFeedback, TimelineEvent } from '@/types/sentiment';
 
 const now = Date.now();
 const hoursAgo = (h: number) => new Date(now - h * 3600 * 1000).toISOString();
+const minutesAgo = (m: number) => new Date(now - m * 60 * 1000).toISOString();
+
+function ev(
+  id: string,
+  type: TimelineEvent['type'],
+  time: string,
+  actor: string,
+  title: string,
+  description: string,
+  dept?: TimelineEvent['dept']
+): TimelineEvent {
+  return { id, type, time, actor, title, description, dept };
+}
+
+function emptyFeedbacks(): Record<string, DeptFeedback | null> {
+  return { legal: null, business: null, secretary: null };
+}
+
+function makeFeedback(
+  dept: DeptFeedback['dept'],
+  status: DeptFeedback['status'],
+  assignedMin: number,
+  respondedMin: number | null,
+  overrides: Partial<DeptFeedback> = {}
+): DeptFeedback {
+  const names: Record<string, string> = { legal: '李法务', business: '王业务', secretary: '赵董秘' };
+  return {
+    dept,
+    status,
+    assignedAt: minutesAgo(assignedMin),
+    respondedAt: respondedMin ? minutesAgo(respondedMin) : null,
+    factStatement: '',
+    publicStatement: '',
+    noResponseBoundary: '',
+    assigneeName: names[dept],
+    ...overrides
+  };
+}
 
 export const mockIncidents: Incident[] = [
   {
@@ -33,11 +71,14 @@ export const mockIncidents: Incident[] = [
     firstReportedAt: hoursAgo(5),
     judgeTag: null,
     judgeNote: '',
-    assignees: [],
+    judgedAt: null,
+    judgedBy: null,
     status: 'open',
-    factStatement: '',
-    publicStatement: '',
-    noResponseBoundary: ''
+    feedbacks: emptyFeedbacks(),
+    timeline: [
+      ev('EVT-001-1', 'first_report', hoursAgo(5), '系统自动监测', '首次监测到相关舆情', '监测源：微博、今日头条，初始热度320')
+    ],
+    updatedAt: minutesAgo(10)
   },
   {
     id: 'INC-002',
@@ -67,12 +108,24 @@ export const mockIncidents: Incident[] = [
     suspectedSource: '某IP属地广东的匿名用户在股吧首发（主贴已被删）',
     firstReportedAt: hoursAgo(6),
     judgeTag: 'exaggerate',
-    judgeNote: '已初步核对财务数据，发帖人对会计准则理解有误',
-    assignees: ['secretary'],
+    judgeNote: '已初步核对财务数据，发帖人对会计准则理解有误，应收账款变动系季节性正常波动',
+    judgedAt: hoursAgo(2.5),
+    judgedBy: '张经理',
     status: 'assigned',
-    factStatement: '',
-    publicStatement: '',
-    noResponseBoundary: ''
+    feedbacks: {
+      ...emptyFeedbacks(),
+      secretary: makeFeedback('secretary', 'in_progress', 150, null, {
+        factStatement: '董秘办已调取近三年同期财报对比，应收账款变动幅度与往年Q2基本一致，主要系经销商备货节奏变化所致。目前已准备详细数据说明。',
+        publicStatement: '',
+        noResponseBoundary: ''
+      })
+    },
+    timeline: [
+      ev('EVT-002-1', 'first_report', hoursAgo(6), '系统自动监测', '首次监测到股吧热帖', '监测源：东方财富股吧，主帖阅读量1.2万'),
+      ev('EVT-002-2', 'judge', hoursAgo(2.5), '张经理', '初判：夸大解读', '已核对财务数据，发帖人对会计准则理解有误'),
+      ev('EVT-002-3', 'assign', hoursAgo(2.5), '张经理', '派单给董秘办', '负责人：赵董秘', 'secretary')
+    ],
+    updatedAt: minutesAgo(15)
   },
   {
     id: 'INC-003',
@@ -103,11 +156,31 @@ export const mockIncidents: Incident[] = [
     firstReportedAt: hoursAgo(8),
     judgeTag: 'pending',
     judgeNote: '正在核实完整通话录音上下文',
-    assignees: ['business', 'legal'],
+    judgedAt: hoursAgo(4),
+    judgedBy: '张经理',
     status: 'assigned',
-    factStatement: '经核实：客户购买产品后因使用不当提出退货，客服沟通中确实存在用语不规范情况，但不存在"拒绝售后"。公司已与客户取得联系并达成和解。',
-    publicStatement: '针对近期网传售后沟通事件，我司高度重视。经内部核查，该事件系沟通表达不当引发的误解，我们已第一时间与客户达成谅解。公司将对相关人员进行服务培训，持续提升客户体验。感谢社会各界监督。',
-    noResponseBoundary: '1. 不公开客户个人信息；2. 不回应"内部管理混乱"等过度延伸指责；3. 不与任何自媒体打口水仗；4. 不披露具体和解金额。'
+    feedbacks: {
+      ...emptyFeedbacks(),
+      business: makeFeedback('business', 'submitted', 240, 90, {
+        factStatement: '业务部已调取完整通话录音及客服工单：客户于6月15日购买XX型号产品，6月17日提出"7天无理由退货"，因包装已拆封影响二次销售，客服沟通时表示需检测后处理，但用词确实不规范（"你自己看着办"等）。不存在拒绝售后，已与客户电话沟通并达成全额退款+200元购物券和解，客户同意删除原帖。',
+        publicStatement: '',
+        noResponseBoundary: ''
+      }),
+      legal: makeFeedback('legal', 'submitted', 220, 80, {
+        factStatement: '法务审核结论：1、公司7天无理由退货政策符合消法规定；2、客服不当言论不构成法律责任，但建议整改话术；3、如对外声明需谨慎措辞，避免承认"产品质量问题"。',
+        publicStatement: '针对近期网传售后沟通事件，我司高度重视。经内部核查，该事件系沟通表达不当引发的误解，我们已第一时间与客户达成谅解。公司将对相关人员进行服务培训，持续提升客户体验。感谢社会各界监督。',
+        noResponseBoundary: '1. 不公开客户个人信息及联系方式；2. 不回应"内部管理混乱""店大欺客"等过度延伸指责；3. 不与任何自媒体或当事人打口水仗；4. 不披露具体和解金额及购物券金额；5. 不主动提及其他历史投诉案例。'
+      })
+    },
+    timeline: [
+      ev('EVT-003-1', 'first_report', hoursAgo(8), '系统自动监测', '首次监测到客户投诉', '监测源：小红书，用户首发'),
+      ev('EVT-003-2', 'judge', hoursAgo(4), '张经理', '初判：真实待确认', '正在核实完整通话录音上下文'),
+      ev('EVT-003-3', 'assign', hoursAgo(4), '张经理', '派单给业务部门', '负责人：王业务', 'business'),
+      ev('EVT-003-4', 'assign', hoursAgo(3.5), '张经理', '派单给法务部', '负责人：李法务', 'legal'),
+      ev('EVT-003-5', 'dept_feedback', hoursAgo(1.5), '王业务', '业务部门已反馈', '已与客户达成和解，客户同意删帖', 'business'),
+      ev('EVT-003-6', 'dept_feedback', minutesAgo(80), '李法务', '法务部已反馈', '对外口径已审定，回应边界已明确', 'legal')
+    ],
+    updatedAt: minutesAgo(60)
   },
   {
     id: 'INC-004',
@@ -126,21 +199,22 @@ export const mockIncidents: Incident[] = [
       { time: '13:00', value: 680 },
       { time: '13:30', value: 650 }
     ],
-    evidenceImages: [
-      { id: 'E7', url: 'https://picsum.photos/id/160/600/400', caption: '自媒体旧文截图' }
-    ],
-    keyComments: [
-      { id: 'C7', author: '路人甲', content: '这不是去年的事吗？', platform: '微信', time: hoursAgo(1.5), likes: 45 }
-    ],
+    evidenceImages: [{ id: 'E7', url: 'https://picsum.photos/id/160/600/400', caption: '自媒体旧文截图' }],
+    keyComments: [{ id: 'C7', author: '路人甲', content: '这不是去年的事吗？', platform: '微信', time: hoursAgo(1.5), likes: 45 }],
     suspectedSource: '某小V公众号为博流量旧闻新发',
     firstReportedAt: hoursAgo(4),
     judgeTag: 'oldnews',
-    judgeNote: '已确认是2025年Q3处罚，公司当时已公告并完成整改',
-    assignees: [],
+    judgeNote: '已确认是2025年Q3处罚，公司当时已公告并完成整改，信息披露合规',
+    judgedAt: hoursAgo(2),
+    judgedBy: '张经理',
     status: 'confirmed',
-    factStatement: '',
-    publicStatement: '',
-    noResponseBoundary: ''
+    feedbacks: emptyFeedbacks(),
+    timeline: [
+      ev('EVT-004-1', 'first_report', hoursAgo(4), '系统自动监测', '首次监测到自媒体旧文', '监测源：微信公众号'),
+      ev('EVT-004-2', 'judge', hoursAgo(2), '张经理', '初判：旧闻重炒', '已确认是2025年Q3处罚，当时已公告并整改'),
+      ev('EVT-004-3', 'status_change', hoursAgo(2), '张经理', '状态变更：已核实', '无需派单协同，持续观察即可')
+    ],
+    updatedAt: minutesAgo(120)
   },
   {
     id: 'INC-005',
@@ -159,21 +233,24 @@ export const mockIncidents: Incident[] = [
       { time: '13:00', value: 1720 },
       { time: '13:30', value: 1890 }
     ],
-    evidenceImages: [
-      { id: 'E8', url: 'https://picsum.photos/id/201/600/400', caption: '雪球分析帖' }
-    ],
-    keyComments: [
-      { id: 'C8', author: '机构研究员L', content: '逻辑基本成立，但短期影响有限，长期看政策利好合规龙头。', platform: '雪球', time: hoursAgo(2), likes: 234 }
-    ],
+    evidenceImages: [{ id: 'E8', url: 'https://picsum.photos/id/201/600/400', caption: '雪球分析帖' }],
+    keyComments: [{ id: 'C8', author: '机构研究员L', content: '逻辑基本成立，但短期影响有限，长期看政策利好合规龙头。', platform: '雪球', time: hoursAgo(2), likes: 234 }],
     suspectedSource: '雪球认证个人投资者原创分析',
     firstReportedAt: hoursAgo(6),
     judgeTag: null,
     judgeNote: '',
-    assignees: ['secretary'],
+    judgedAt: null,
+    judgedBy: null,
     status: 'open',
-    factStatement: '',
-    publicStatement: '',
-    noResponseBoundary: ''
+    feedbacks: {
+      ...emptyFeedbacks(),
+      secretary: makeFeedback('secretary', 'pending', 30, null)
+    },
+    timeline: [
+      ev('EVT-005-1', 'first_report', hoursAgo(6), '系统自动监测', '首次监测到雪球深度帖', '阅读量超5万，讨论理性'),
+      ev('EVT-005-2', 'assign', minutesAgo(30), '张经理', '派单给董秘办', '评估是否需要正式回应', 'secretary')
+    ],
+    updatedAt: minutesAgo(25)
   },
   {
     id: 'INC-006',
@@ -204,12 +281,37 @@ export const mockIncidents: Incident[] = [
     suspectedSource: '疑似IP在境外的多个账号有组织同步发布',
     firstReportedAt: hoursAgo(3),
     judgeTag: 'malicious',
-    judgeNote: '经财务和法务初步核实，公司经营正常，现金流充裕，该信息为100%伪造。已启动公证留证程序。',
-    assignees: ['legal', 'secretary', 'business'],
+    judgeNote: '经财务和法务初步核实，公司经营正常，现金流充裕，该信息为100%伪造。已启动公证处电子证据存证程序，同步联系平台方。',
+    judgedAt: hoursAgo(1.5),
+    judgedBy: '张经理',
     status: 'assigned',
-    factStatement: '',
-    publicStatement: '',
-    noResponseBoundary: ''
+    feedbacks: {
+      ...emptyFeedbacks(),
+      legal: makeFeedback('legal', 'in_progress', 90, null, {
+        factStatement: '法务部已完成：1、上海某公证处电子证据存证（存证编号SH-GZ-2026-XXXXXX）；2、联系微信安全中心举报12个核心传播群；3、律师函草拟中，预计1小时后定稿。正在排查源头IP地址。',
+        publicStatement: '',
+        noResponseBoundary: ''
+      }),
+      secretary: makeFeedback('secretary', 'in_progress', 90, null, {
+        factStatement: '董秘办已：1、对接交易所报备该事项；2、草拟《关于不实信息的澄清公告》，待法务审定后走公告流程；3、同步机构投资者关系团队，准备定向沟通口径。',
+        publicStatement: '',
+        noResponseBoundary: ''
+      }),
+      business: makeFeedback('business', 'submitted', 90, 50, {
+        factStatement: '业务部核实：公司目前在手订单充足（Q2已完成全年目标65%），与前5大客户合作稳定，主要供应商账期未变。一线销售未出现异常退换货。经营一切正常。',
+        publicStatement: '',
+        noResponseBoundary: ''
+      })
+    },
+    timeline: [
+      ev('EVT-006-1', 'first_report', hoursAgo(3), '系统自动监测', '首次监测到微信群谣言', '监测源：12个投资微信群同步传播'),
+      ev('EVT-006-2', 'judge', hoursAgo(1.5), '张经理', '初判：恶意谣传', '100%伪造，已启动公证留证'),
+      ev('EVT-006-3', 'assign', hoursAgo(1.5), '张经理', '派单给法务部', '负责人：李法务', 'legal'),
+      ev('EVT-006-4', 'assign', hoursAgo(1.5), '张经理', '派单给董秘办', '负责人：赵董秘', 'secretary'),
+      ev('EVT-006-5', 'assign', hoursAgo(1.5), '张经理', '派单给业务部门', '负责人：王业务', 'business'),
+      ev('EVT-006-6', 'dept_feedback', minutesAgo(50), '王业务', '业务部门已反馈', '一线经营一切正常，订单充足', 'business')
+    ],
+    updatedAt: minutesAgo(35)
   }
 ];
 
@@ -218,29 +320,37 @@ export const mockSyncTemplates: SyncTemplate[] = [
     id: 'SYNC-001',
     incidentId: 'INC-003',
     incidentTitle: '客户投诉被财经号转发：售后态度问题发酵',
+    incidentCategory: 'complaint',
     generatedAt: hoursAgo(1),
-    progress: '经核实，客户投诉内容部分属实（客服用语不规范），但不存在拒绝售后的情况。公司已与客户达成和解，客户同意删除原帖。法务部已完成对外口径审定，业务部门对客服团队启动专项培训。',
+    progress:
+      '客户投诉事项：当事人XX，核心诉求退货+赔偿。已取得电话联系并达成和解（全额退款+200元购物券），客户同意删除原帖。转发媒体数量共7家，目前热度趋稳。法务已审定对外口径，业务部对客服团队启动专项话术培训。',
     suggestedActions: [
-      '14:00前 在官方微博发布正式声明',
-      '联系首发财经号提供事实说明，请求更正',
-      '客服部本周内完成话术规范复盘'
+      '14:00前 在官方微博发布正式声明（法务已审定版）',
+      '联系首发财经号提供事实说明，请求更正或撤稿',
+      '客服部本周内完成话术规范复盘及全员培训',
+      '持续监测舆情至今日收盘，如无升温可关闭'
     ],
-    nextCheckTime: new Date(now + 2 * 3600 * 1000).toISOString(),
-    content: ''
+    nextCheckTime: '6月19日 15:30（收盘复盘）',
+    content: '',
+    generatedBy: '张经理'
   },
   {
     id: 'SYNC-002',
     incidentId: 'INC-006',
     incidentTitle: '恶意谣传：微信群散布公司资金链断裂谣言',
-    generatedAt: hoursAgo(0.5),
-    progress: '已确认系恶意谣言，公司财务数据一切正常。法务部已完成公证处电子证据存证，正在排查源头IP。董秘办草拟公告，预计15:00前通过交易所渠道发布。',
+    incidentCategory: 'complaint',
+    generatedAt: minutesAgo(30),
+    progress:
+      '客户投诉（恶意谣传类）：微信群"资金链断裂"谣言，已确认为100%伪造。法务完成公证处电子存证，正在排查源头IP；董秘办已对接交易所，公告草拟中；业务核实一线经营一切正常。',
     suggestedActions: [
-      '15:00前 发布交易所临时停牌澄清公告（如需）',
-      '联合主流财经媒体发布权威报道',
-      '联系各大平台举报删除不实信息',
-      '持续监控融券异动数据'
+      '15:00前 发布交易所澄清公告（法务最终审定中）',
+      '联合主流财经媒体发布权威报道，压制谣言传播',
+      '联系各大平台方批量举报删除不实信息',
+      'IR团队定向沟通前50大机构投资者',
+      '持续监控融券异动及龙虎榜数据'
     ],
-    nextCheckTime: new Date(now + 1 * 3600 * 1000).toISOString(),
-    content: ''
+    nextCheckTime: '6月19日 14:30（公告发布后复盘）',
+    content: '',
+    generatedBy: '张经理'
   }
 ];
