@@ -2,6 +2,7 @@
   padding: 16px;
   background: #fff;
   border-radius: 12px;
+  padding-bottom: 160rpx;
 }
 
 .header {
@@ -59,20 +60,129 @@
   color: #8e8e93;
 }
 
+.handoverInfoBar {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  padding: 20rpx;
+  background: #F7F8FA;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.handoverInfo {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.handoverInfoLabel {
+  font-size: 24rpx;
+  color: #86909C;
+  flex-shrink: 0;
+  width: 120rpx;
+}
+
+.handoverInfoInput {
+  flex: 1;
+  font-size: 26rpx;
+  color: #1D2129;
+  background: #fff;
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid #E5E6EB;
+  min-height: 48rpx;
+}
+
+.handoverInfoValue {
+  flex: 1;
+  font-size: 26rpx;
+  color: #1D2129;
+  font-weight: 500;
+}
+
+.progressBar {
+  padding: 20rpx;
+  background: #FFF;
+  border: 1rpx solid #E5E6EB;
+  border-radius: 12rpx;
+  margin-bottom: 24rpx;
+}
+
+.progressRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.progressLabel {
+  font-size: 26rpx;
+  color: #1D2129;
+  font-weight: 500;
+}
+
+.progressText {
+  font-size: 26rpx;
+  color: #722ED1;
+  font-weight: 600;
+}
+
+.progressTrack {
+  height: 8rpx;
+  background: #F2F3F5;
+  border-radius: 4rpx;
+  overflow: hidden;
+  margin-bottom: 16rpx;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #722ED1 0%, #9254DE 100%);
+  border-radius: 4rpx;
+  transition: width 0.2s ease;
+}
+
+.progressActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.progressToggleBtn {
+  padding: 0 24rpx !important;
+  height: 56rpx !important;
+  font-size: 24rpx !important;
+  background: #F2F3F5 !important;
+  color: #4E5969 !important;
+  border-radius: 8rpx !important;
+  margin: 0 !important;
+  line-height: 56rpx !important;
+}
+
+.progressToggleBtn::after {
+  border: none !important;
+}
+
 .tableHeader {
   display: none;
 }
 
 .row {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
   background: #fff;
   border: 1px solid #e5e5ea;
-  border-radius: 10px;
+  border-radius: 16rpx;
   transition: all 0.2s ease;
+}
+
+.rowRead {
+  background: #F7FFF9;
+  border-color: rgba(52, 199, 89, 0.3);
 }
 
 .rowCurrent {
@@ -80,6 +190,42 @@
   border-width: 2px;
   background: linear-gradient(135deg, rgba(0, 122, 255, 0.03), rgba(0, 122, 255, 0));
   box-shadow: 0 2px 12px rgba(0, 122, 255, 0.08);
+}
+
+.readCheck {
+  flex-shrink: 0;
+  padding-top: 8rpx;
+}
+
+.checkBox {
+  width: 40rpx;
+  height: 40rpx;
+  border: 2rpx solid #C9CDD4;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  transition: all 0.15s ease;
+}
+
+.checkBoxChecked {
+  background: #722ED1;
+  border-color: #722ED1;
+}
+
+.checkMark {
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.rowBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
 }
 
 .tdPriority {
@@ -201,4 +347,70 @@
   font-size: 12px;
   color: #007aff;
   font-weight: 500;
+}
+
+.noteSection {
+  grid-column: 1 / -1;
+  padding-top: 16rpx;
+  margin-top: 16rpx;
+  border-top: 1rpx dashed #E5E6EB;
+}
+
+.noteLabel {
+  font-size: 22rpx;
+  color: #86909C;
+  display: block;
+  margin-bottom: 8rpx;
+}
+
+.noteInput {
+  width: 100%;
+  font-size: 24rpx;
+  color: #1D2129;
+  background: #F7F8FA;
+  padding: 12rpx 16rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid transparent;
+  min-height: 64rpx;
+  box-sizing: border-box;
+}
+
+.noteInput:focus-within {
+  border-color: #722ED1;
+  background: #fff;
+}
+
+.confirmBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20rpx 32rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1rpx solid #E5E6EB;
+  z-index: 100;
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.05);
+}
+
+.confirmBtn {
+  width: 100% !important;
+  height: 88rpx !important;
+  font-size: 30rpx !important;
+  font-weight: 600 !important;
+  background: #F2F3F5 !important;
+  color: #C9CDD4 !important;
+  border-radius: 44rpx !important;
+  margin: 0 !important;
+  line-height: 88rpx !important;
+}
+
+.confirmBtn::after {
+  border: none !important;
+}
+
+.confirmBtnActive {
+  background: linear-gradient(135deg, #722ED1 0%, #9254DE 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 8rpx 24rpx rgba(114, 46, 209, 0.25) !important;
 }

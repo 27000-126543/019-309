@@ -16,7 +16,8 @@ export type TimelineEventType =
   | 'dept_reject'
   | 'generate_sync'
   | 'status_change'
-  | 'note';
+  | 'note'
+  | 'shift_handover';
 
 export interface TrendPoint {
   time: string;
@@ -66,6 +67,9 @@ export interface TimelineEvent {
   title: string;
   description: string;
   dept?: AssigneeDept;
+  handoverFrom?: string;
+  handoverTo?: string;
+  handoverNote?: string;
 }
 
 export interface Incident {
@@ -162,7 +166,8 @@ export const TIMELINE_EVENT_LABELS: Record<TimelineEventType, string> = {
   dept_reject: '退回补充',
   generate_sync: '生成同步',
   status_change: '状态变更',
-  note: '补充记录'
+  note: '补充记录',
+  shift_handover: '交接班确认'
 };
 
 export const CATEGORY_TEMPLATES: Record<IncidentCategory, CategoryTemplateConfig> = {
@@ -275,4 +280,107 @@ export function getAdaptiveRhythm(
     label: '常规：每6小时观察',
     extraActions: ['每日上午和下午各汇总一次']
   };
+}
+
+export interface SyncVersionDiff {
+  hasChanges: boolean;
+  progressAdded: string[];
+  progressRemoved: string[];
+  actionsAdded: string[];
+  actionsRemoved: string[];
+  nextCheckChanged: { from: string; to: string } | null;
+  heatChanged: { from: number; to: number } | null;
+  deptStatusChanges: Array<{
+    dept: AssigneeDept;
+    from: DeptFeedbackStatus | null;
+    to: DeptFeedbackStatus | null;
+  }>;
+}
+
+export function diffSyncVersions(
+  newer: SyncTemplate | null | undefined,
+  older: SyncTemplate | null | undefined
+): SyncVersionDiff {
+  if (!newer) {
+    return {
+      hasChanges: false,
+      progressAdded: [],
+      progressRemoved: [],
+      actionsAdded: [],
+      actionsRemoved: [],
+      nextCheckChanged: null,
+      heatChanged: null,
+      deptStatusChanges: []
+    };
+  }
+  if (!older) {
+    return {
+      hasChanges: true,
+      progressAdded: newer.progress ? ['初始进展已填写'] : [],
+      progressRemoved: [],
+      actionsAdded: newer.suggestedActions.slice(),
+      actionsRemoved: [],
+      nextCheckChanged: newer.nextCheckTime ? { from: '(未设置)', to: newer.nextCheckTime } : null,
+      heatChanged: newer.snapshotHeat > 0 ? { from: 0, to: newer.snapshotHeat } : null,
+      deptStatusChanges: (Object.keys(newer.snapshotDeptStatus) as AssigneeDept[])
+        .filter((d) => newer.snapshotDeptStatus[d])
+        .map((d) => ({ dept: d, from: null, to: newer.snapshotDeptStatus[d] }))
+    };
+  }
+
+  const linesDiff = (a: string, b: string) => {
+    const setA = new Set(a.split(/\n+/).map((s) => s.trim()).filter(Boolean));
+    const setB = new Set(b.split(/\n+/).map((s) => s.trim()).filter(Boolean));
+    const added: string[] = [];
+    setA.forEach((l) => { if (!setB.has(l)) added.push(l); });
+    const removed: string[] = [];
+    setB.forEach((l) => { if (!setA.has(l)) removed.push(l); });
+    return { added, removed };
+  };
+
+  const progressDiff = linesDiff(newer.progress || '', older.progress || '');
+  const actionsSetOlder = new Set(older.suggestedActions);
+  const actionsSetNewer = new Set(newer.suggestedActions);
+  const actionsAdded = newer.suggestedActions.filter((a) => !actionsSetOlder.has(a));
+  const actionsRemoved = older.suggestedActions.filter((a) => !actionsSetNewer.has(a));
+
+  const nextCheckChanged = newer.nextCheckTime !== older.nextCheckTime
+    ? { from: older.nextCheckTime, to: newer.nextCheckTime }
+    : null;
+
+  const heatChanged = newer.snapshotHeat !== older.snapshotHeat
+    ? { from: older.snapshotHeat, to: newer.snapshotHeat }
+    : null;
+
+  const deptStatusChanges: SyncVersionDiff['deptStatusChanges'] = [];
+  (Object.keys(newer.snapshotDeptStatus) as AssigneeDept[]).forEach((d) => {
+    const from = older.snapshotDeptStatus[d] || null;
+    const to = newer.snapshotDeptStatus[d] || null;
+    if (from !== to) deptStatusChanges.push({ dept: d, from, to });
+  });
+
+  return {
+    hasChanges:
+      progressDiff.added.length > 0 ||
+      progressDiff.removed.length > 0 ||
+      actionsAdded.length > 0 ||
+      actionsRemoved.length > 0 ||
+      !!nextCheckChanged ||
+      !!heatChanged ||
+      deptStatusChanges.length > 0,
+    progressAdded: progressDiff.added,
+    progressRemoved: progressDiff.removed,
+    actionsAdded,
+    actionsRemoved,
+    nextCheckChanged,
+    heatChanged,
+    deptStatusChanges
+  };
+}
+
+export interface IncidentHandoverItem {
+  incidentId: string;
+  incidentTitle: string;
+  read: boolean;
+  note: string;
 }

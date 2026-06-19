@@ -12,8 +12,11 @@ import {
   URGENCY_LABELS,
   JUDGE_LABELS,
   DEPT_LABELS,
+  DEPT_FEEDBACK_STATUS_LABELS,
   CATEGORY_TEMPLATES,
   getAdaptiveRhythm,
+  diffSyncVersions,
+  SyncVersionDiff,
   AssigneeDept,
   DeptFeedbackStatus
 } from '@/types/sentiment';
@@ -27,6 +30,7 @@ const SummaryPage: React.FC = () => {
   const getMergedFeedback = useSentimentStore((s) => s.getMergedFeedback);
   const buildSyncSnapshot = useSentimentStore((s) => s.buildSyncSnapshot);
   const addSyncTemplate = useSentimentStore((s) => s.addSyncTemplate);
+  const getLatestSyncForIncident = useSentimentStore((s) => s.getLatestSyncForIncident);
   const setCurrentIncidentId = useSentimentStore((s) => s.setCurrentIncidentId);
 
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -34,6 +38,9 @@ const SummaryPage: React.FC = () => {
   const [actions, setActions] = useState<string[]>([]);
   const [nextCheckTime, setNextCheckTime] = useState<string>('');
   const [detailTpl, setDetailTpl] = useState<SyncTemplate | null>(null);
+  const [versionNote, setVersionNote] = useState<string>('');
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [diffModal, setDiffModal] = useState<{ visible: boolean; diff: SyncVersionDiff | null; prevTpl: SyncTemplate | null }>({ visible: false, diff: null, prevTpl: null });
 
   const activeId = currentIncidentId || incidents[0]?.id || '';
 
@@ -121,17 +128,50 @@ const SummaryPage: React.FC = () => {
       Taro.showToast({ title: '请至少填写一条建议动作', icon: 'none' });
       return;
     }
+    if (!incident) return;
     const snapshot = buildSyncSnapshot(incident);
-    addSyncTemplate({
+    const prevTpl = getLatestSyncForIncident(incident.id);
+    const pendingNew: SyncTemplate = {
+      id: '',
       incidentId: incident.id,
       incidentTitle: incident.title,
       incidentCategory: incident.category,
-      progressText: progressText.trim(),
+      generatedAt: new Date().toISOString(),
+      progress: progressText.trim(),
       suggestedActions: actions.filter((a) => a.trim()),
       nextCheckTime: nextCheckTime.trim() || '待确认',
-      factStatement: snapshot.snapshotFactStatement,
-      publicStatement: snapshot.snapshotPublicStatement,
-      noResponseBoundary: snapshot.snapshotNoResponseBoundary,
+      content: '',
+      generatedBy: useSentimentStore.getState().currentUser,
+      snapshotHeat: snapshot.snapshotHeat,
+      snapshotJudgeTag: snapshot.snapshotJudgeTag,
+      snapshotJudgeNote: snapshot.snapshotJudgeNote,
+      snapshotDeptStatus: snapshot.snapshotDeptStatus,
+      snapshotFactStatement: snapshot.snapshotFactStatement,
+      snapshotPublicStatement: snapshot.snapshotPublicStatement,
+      snapshotNoResponseBoundary: snapshot.snapshotNoResponseBoundary,
+      adaptiveCheckMinutes: snapshot.adaptiveCheckMinutes,
+      version: 0,
+      previousId: null,
+      versionNote: versionNote.trim()
+    };
+    const diff = diffSyncVersions(pendingNew, prevTpl);
+    if (diff.hasChanges && prevTpl) {
+      setDiffModal({ visible: true, diff, prevTpl });
+      return;
+    }
+    doGenerate();
+  };
+
+  const doGenerate = () => {
+    if (!incident) return;
+    const snapshot = buildSyncSnapshot(incident);
+    const newTpl = addSyncTemplate({
+      incidentId: incident.id,
+      incidentTitle: incident.title,
+      incidentCategory: incident.category,
+      progress: progressText.trim(),
+      suggestedActions: actions.filter((a) => a.trim()),
+      nextCheckTime: nextCheckTime.trim() || '待确认',
       content: '',
       snapshotHeat: snapshot.snapshotHeat,
       snapshotJudgeTag: snapshot.snapshotJudgeTag,
@@ -140,18 +180,25 @@ const SummaryPage: React.FC = () => {
       snapshotFactStatement: snapshot.snapshotFactStatement,
       snapshotPublicStatement: snapshot.snapshotPublicStatement,
       snapshotNoResponseBoundary: snapshot.snapshotNoResponseBoundary,
-      adaptiveCheckMinutes: snapshot.adaptiveCheckMinutes
+      adaptiveCheckMinutes: snapshot.adaptiveCheckMinutes,
+      versionNote: versionNote.trim()
     });
-    Taro.showToast({ title: '同步模板已生成', icon: 'success' });
+    setVersionNote('');
+    setDiffModal({ visible: false, diff: null, prevTpl: null });
+    setDetailTpl(newTpl);
+    setCurrentIncidentId(incident.id);
+    setExpandedGroups((g) => ({ ...g, [incident.id]: true }));
+    Taro.showToast({ title: `已生成同步 v${newTpl.version}`, icon: 'success' });
   };
 
   const handleReuse = (tpl: SyncTemplate) => {
     setCurrentIncidentId(tpl.incidentId);
-    setProgressText(tpl.progress);
-    setActions([...tpl.suggestedActions]);
-    setNextCheckTime(tpl.nextCheckTime);
+    setProgressText(tpl.progress || '');
+    setActions([...(tpl.suggestedActions || [])]);
+    setNextCheckTime(tpl.nextCheckTime || '');
+    setVersionNote(tpl.versionNote || '');
     setDetailTpl(null);
-    Taro.showToast({ title: `已复用「${tpl.incidentTitle.slice(0, 10)}」的同步模板`, icon: 'none' });
+    Taro.showToast({ title: `已复用 v${tpl.version}「${tpl.incidentTitle.slice(0, 10)}」`, icon: 'none' });
   };
 
   const handleCopy = () => {
@@ -322,7 +369,31 @@ const SummaryPage: React.FC = () => {
         <View className={styles.sectionCard}>
           <View className={styles.sectionHeader}>
             <View className={styles.sectionTitle}>
-              <View className={styles.sectionIcon}>👁</View>
+              <View className={styles.sectionIcon}>�</View>
+              <Text>版本说明（可选）</Text>
+            </View>
+            <View className={styles.badge}>交接班用</View>
+          </View>
+          <View className={styles.field}>
+            <View className={styles.fieldLabel}>
+              <Text>这一版同步的改动摘要</Text>
+              <Text className={styles.fieldHint}>建议一句话说明，例如：进展更新、新增2条建议动作、观察时间提前</Text>
+            </View>
+            <Textarea
+              value={versionNote}
+              onInput={(e) => setVersionNote(e.detail.value)}
+              className={styles.textarea}
+              placeholder="这一版同步更新了什么内容..."
+              maxlength={200}
+              autoHeight
+            />
+          </View>
+        </View>
+
+        <View className={styles.sectionCard}>
+          <View className={styles.sectionHeader}>
+            <View className={styles.sectionTitle}>
+              <View className={styles.sectionIcon}>�</View>
               <Text>同步模板预览</Text>
             </View>
           </View>
@@ -359,7 +430,7 @@ const SummaryPage: React.FC = () => {
       <View className={styles.historySection}>
         <View className={styles.historyHeader}>
           <View className={styles.historyTitle}>
-            <Text>📚 历史同步记录（按事项归档）</Text>
+            <Text>📚 复盘档案（按事项版本时间轴）</Text>
           </View>
           <View className={styles.historyCount}>{historyAll.length} 条 · {groupedList.length} 个事项</View>
         </View>
@@ -367,69 +438,138 @@ const SummaryPage: React.FC = () => {
           <View className={styles.emptyTip}>暂无历史同步记录，保存后可在此复用</View>
         ) : (
           <View className={styles.historyGroups}>
-            {groupedList.map((group) => (
-              <View key={group.incidentId} className={styles.historyGroup}>
-                <View className={styles.historyGroupHeader}>
-                  <Text className={styles.historyGroupTitle} numberOfLines={1}>
-                    {group.incidentTitle}
-                  </Text>
-                  <View className={styles.historyGroupBadge}>
-                    <Text className={styles.historyGroupBadgeText}>
-                      共 {group.templates.length} 版
-                    </Text>
+            {groupedList.map((group) => {
+              const isExpanded = expandedGroups[group.incidentId] !== false;
+              const toggle = () => setExpandedGroups((g) => ({ ...g, [group.incidentId]: !isExpanded }));
+              const latestTpl = group.templates[0];
+              return (
+                <View key={group.incidentId} className={styles.historyGroup}>
+                  <View className={styles.historyGroupHeader} onClick={toggle}>
+                    <View className={styles.historyGroupHeaderLeft}>
+                      <Text className={styles.historyGroupTitle} numberOfLines={1}>
+                        {group.incidentTitle}
+                      </Text>
+                      <View className={styles.historyGroupBadge}>
+                        <Text className={styles.historyGroupBadgeText}>
+                          共 {group.templates.length} 版
+                        </Text>
+                      </View>
+                      {latestTpl?.versionNote && (
+                        <Text className={styles.historyGroupNote} numberOfLines={1}>
+                          最新：{latestTpl.versionNote}
+                        </Text>
+                      )}
+                    </View>
+                    <Text className={isExpanded ? styles.groupArrowUp : styles.groupArrowDown}>›</Text>
                   </View>
+
+                  {isExpanded && (
+                    <View className={styles.versionTimeline}>
+                      {group.templates.map((tpl, idx) => {
+                        const prevTpl = group.templates[idx + 1] || null;
+                        const tplDiff = diffSyncVersions(tpl, prevTpl);
+                        return (
+                          <View key={tpl.id} className={styles.timelineNode}>
+                            <View className={styles.timelineDot}>
+                              <View className={classnames(styles.timelineDotInner, idx === 0 && styles.timelineDotLatest)} />
+                            </View>
+                            {idx < group.templates.length - 1 && <View className={styles.timelineLine} />}
+
+                            <View className={classnames(styles.timelineCard, idx === 0 && styles.timelineCardLatest)}>
+                              <View className={styles.historyHead}>
+                                <View className={styles.historyHeadLeft}>
+                                  <View className={classnames(styles.versionBadge, idx === 0 && styles.versionBadgeLatest)}>
+                                    <Text className={styles.versionBadgeText}>v{tpl.version}</Text>
+                                  </View>
+                                  {idx === 0 && (
+                                    <View className={styles.latestBadge}>
+                                      <Text className={styles.latestBadgeText}>最新版</Text>
+                                    </View>
+                                  )}
+                                  <Text className={styles.historyTime}>{formatTime(tpl.generatedAt)} · by {tpl.generatedBy}</Text>
+                                </View>
+                              </View>
+
+                              {tpl.versionNote && (
+                                <View className={styles.versionNote}>
+                                  <Text className={styles.versionNoteLabel}>📝 版本说明：</Text>
+                                  <Text className={styles.versionNoteText}>{tpl.versionNote}</Text>
+                                </View>
+                              )}
+
+                              {tplDiff.hasChanges && prevTpl && (
+                                <View className={styles.diffBlock}>
+                                  <Text className={styles.diffTitle}>
+                                    🔄 相比 v{prevTpl.version} 变化：
+                                  </Text>
+                                  {tplDiff.heatChanged && (
+                                    <View className={styles.diffItem}>
+                                      <Text className={styles.diffItemLabel}>热度：</Text>
+                                      <Text className={tplDiff.heatChanged.to > tplDiff.heatChanged.from ? styles.diffItemUp : styles.diffItemDown}>
+                                        {tplDiff.heatChanged.from.toLocaleString()} → {tplDiff.heatChanged.to.toLocaleString()}
+                                      </Text>
+                                    </View>
+                                  )}
+                                  {tplDiff.nextCheckChanged && (
+                                    <View className={styles.diffItem}>
+                                      <Text className={styles.diffItemLabel}>观察时间：</Text>
+                                      <Text className={styles.diffItemChanged}>
+                                        {tplDiff.nextCheckChanged.from} → {tplDiff.nextCheckChanged.to}
+                                      </Text>
+                                    </View>
+                                  )}
+                                  {tplDiff.actionsAdded.length > 0 && (
+                                    <View className={styles.diffItem}>
+                                      <Text className={styles.diffItemLabel}>新增动作：</Text>
+                                      {tplDiff.actionsAdded.map((a, i) => (
+                                        <Text key={i} className={styles.diffItemAdded}>+ {a}</Text>
+                                      ))}
+                                    </View>
+                                  )}
+                                  {tplDiff.deptStatusChanges.length > 0 && (
+                                    <View className={styles.diffItem}>
+                                      <Text className={styles.diffItemLabel}>部门状态：</Text>
+                                      {tplDiff.deptStatusChanges.map((d, i) => (
+                                        <Text key={i} className={styles.diffItemChanged}>
+                                          {DEPT_LABELS[d.dept]}：{d.from ? DEPT_FEEDBACK_STATUS_LABELS[d.from] : '未派'} → {d.to ? DEPT_FEEDBACK_STATUS_LABELS[d.to] : '未派'}
+                                        </Text>
+                                      ))}
+                                    </View>
+                                  )}
+                                </View>
+                              )}
+
+                              <Text className={styles.historyPreview}>📌 {tpl.progress}</Text>
+
+                              {renderDeptStatusTags(tpl.snapshotDeptStatus)}
+
+                              <View className={styles.historyMeta}>
+                                <View className={styles.historyMetaLeft}>
+                                  <View className={styles.historyTag}>{CATEGORY_LABELS[tpl.incidentCategory]}</View>
+                                  <View className={styles.historyTag}>{tpl.suggestedActions.length} 项动作</View>
+                                  {tpl.snapshotHeat > 0 && (
+                                    <View className={styles.historyTag}>热度 {tpl.snapshotHeat.toLocaleString()}</View>
+                                  )}
+                                  <View className={styles.historyTag}>⏰ {tpl.nextCheckTime}</View>
+                                </View>
+                                <View style={{ display: 'flex', gap: '12rpx' }}>
+                                  <Button className={styles.reuseBtn} onClick={() => setDetailTpl(tpl)}>
+                                    详情
+                                  </Button>
+                                  <Button className={styles.reuseBtnPrimary} onClick={() => handleReuse(tpl)}>
+                                    复用此版
+                                  </Button>
+                                </View>
+                              </View>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
                 </View>
-
-                {group.templates.map((tpl, idx) => (
-                  <View key={tpl.id} className={classnames(styles.historyCard, idx === 0 && styles.historyCardLatest)}>
-                    <View className={styles.historyHead}>
-                      <View className={styles.historyHeadLeft}>
-                        <View className={classnames(styles.versionBadge, idx === 0 && styles.versionBadgeLatest)}>
-                          <Text className={styles.versionBadgeText}>v{tpl.version}</Text>
-                        </View>
-                        <Text className={styles.historyIncident} numberOfLines={1}>{tpl.incidentTitle}</Text>
-                      </View>
-                      <Text className={styles.historyTime}>{formatTime(tpl.generatedAt)}</Text>
-                    </View>
-
-                    {tpl.versionNote && (
-                      <View className={styles.versionNote}>
-                        <Text className={styles.versionNoteLabel}>版本说明：</Text>
-                        <Text className={styles.versionNoteText}>{tpl.versionNote}</Text>
-                      </View>
-                    )}
-
-                    <Text className={styles.historyPreview}>{tpl.progress}</Text>
-                    <View className={styles.historyMeta}>
-                      <View className={styles.historyMetaLeft}>
-                        <View className={styles.historyTag}>{CATEGORY_LABELS[tpl.incidentCategory]}</View>
-                        <View className={styles.historyTag}>{tpl.suggestedActions.length} 项动作</View>
-                        <View className={styles.historyTag}>by {tpl.generatedBy}</View>
-                        {tpl.snapshotHeat > 0 && (
-                          <View className={styles.historyTag}>热度 {tpl.snapshotHeat.toLocaleString()}</View>
-                        )}
-                      </View>
-                      <View style={{ display: 'flex', gap: '12rpx' }}>
-                        <Button className={styles.reuseBtn} onClick={() => setDetailTpl(tpl)}>
-                          详情
-                        </Button>
-                        <Button className={styles.reuseBtn} onClick={() => handleReuse(tpl)}>
-                          复用此版
-                        </Button>
-                      </View>
-                    </View>
-
-                    {idx < group.templates.length - 1 && (
-                      <View className={styles.versionConnector}>
-                        <View className={styles.versionConnectorLine}></View>
-                        <Text className={styles.versionConnectorText}>更新为 v{tpl.version - 1}</Text>
-                        <View className={styles.versionConnectorLine}></View>
-                      </View>
-                    )}
-                  </View>
-                ))}
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </View>
@@ -596,6 +736,139 @@ const SummaryPage: React.FC = () => {
                 </View>
               </View>
             </ScrollView>
+          </View>
+        </View>
+      )}
+
+      {diffModal.visible && diffModal.diff && (
+        <View className={styles.modalMask} onClick={() => setDiffModal({ visible: false, diff: null, prevTpl: null })}>
+          <View className={styles.modalSheet} style={{ maxHeight: '80vh' }} onClick={(e) => e.stopPropagation && e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>📝 确认生成新版同步</Text>
+              <Text className={styles.modalClose} onClick={() => setDiffModal({ visible: false, diff: null, prevTpl: null })}>×</Text>
+            </View>
+            <ScrollView scrollY className={styles.modalList} style={{ padding: '24rpx 32rpx' }}>
+              {diffModal.prevTpl && (
+                <View style={{ padding: '16rpx', background: '#F0F7FF', borderRadius: '12rpx', marginBottom: '24rpx' }}>
+                  <Text style={{ fontSize: '26rpx', color: '#007AFF', fontWeight: 600, display: 'block', marginBottom: '8rpx' }}>
+                    即将生成 v{diffModal.prevTpl.version + 1}，上一版为 v{diffModal.prevTpl.version}
+                  </Text>
+                  <Text style={{ fontSize: '22rpx', color: '#86909C' }}>
+                    {formatTime(diffModal.prevTpl.generatedAt)} · by {diffModal.prevTpl.generatedBy}
+                  </Text>
+                </View>
+              )}
+
+              <Text style={{ fontSize: '28rpx', fontWeight: 600, color: '#1D2129', marginBottom: '16rpx', display: 'block' }}>
+                与上一版相比的变化：
+              </Text>
+
+              {diffModal.diff.heatChanged && (
+                <View className={styles.diffRow}>
+                  <Text className={styles.diffRowLabel}>🔥 热度</Text>
+                  <Text className={diffModal.diff.heatChanged.to > diffModal.diff.heatChanged.from ? styles.diffUp : styles.diffDown}>
+                    {diffModal.diff.heatChanged.from.toLocaleString()} → {diffModal.diff.heatChanged.to.toLocaleString()}
+                  </Text>
+                </View>
+              )}
+
+              {diffModal.diff.nextCheckChanged && (
+                <View className={styles.diffRow}>
+                  <Text className={styles.diffRowLabel}>⏰ 观察时间</Text>
+                  <Text className={styles.diffChanged}>
+                    {diffModal.diff.nextCheckChanged.from} → {diffModal.diff.nextCheckChanged.to}
+                  </Text>
+                </View>
+              )}
+
+              {diffModal.diff.progressAdded.length > 0 && (
+                <View className={styles.diffRow}>
+                  <Text className={styles.diffRowLabel}>📌 进展新增</Text>
+                  <View style={{ flex: 1 }}>
+                    {diffModal.diff.progressAdded.map((p, i) => (
+                      <Text key={i} className={styles.diffAdded}>+ {p}</Text>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {diffModal.diff.progressRemoved.length > 0 && (
+                <View className={styles.diffRow}>
+                  <Text className={styles.diffRowLabel}>📌 进展移除</Text>
+                  <View style={{ flex: 1 }}>
+                    {diffModal.diff.progressRemoved.map((p, i) => (
+                      <Text key={i} className={styles.diffRemoved}>- {p}</Text>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {diffModal.diff.actionsAdded.length > 0 && (
+                <View className={styles.diffRow}>
+                  <Text className={styles.diffRowLabel}>🎯 新增动作</Text>
+                  <View style={{ flex: 1 }}>
+                    {diffModal.diff.actionsAdded.map((a, i) => (
+                      <Text key={i} className={styles.diffAdded}>+ {a}</Text>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {diffModal.diff.actionsRemoved.length > 0 && (
+                <View className={styles.diffRow}>
+                  <Text className={styles.diffRowLabel}>🎯 移除动作</Text>
+                  <View style={{ flex: 1 }}>
+                    {diffModal.diff.actionsRemoved.map((a, i) => (
+                      <Text key={i} className={styles.diffRemoved}>- {a}</Text>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {diffModal.diff.deptStatusChanges.length > 0 && (
+                <View className={styles.diffRow}>
+                  <Text className={styles.diffRowLabel}>🏢 部门状态</Text>
+                  <View style={{ flex: 1 }}>
+                    {diffModal.diff.deptStatusChanges.map((d, i) => (
+                      <Text key={i} className={styles.diffChanged}>
+                        {DEPT_LABELS[d.dept]}：{d.from ? DEPT_FEEDBACK_STATUS_LABELS[d.from] : '未派'} → {d.to ? DEPT_FEEDBACK_STATUS_LABELS[d.to] : '未派'}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {!diffModal.diff.hasChanges && (
+                <Text style={{ fontSize: '26rpx', color: '#86909C', textAlign: 'center', padding: '32rpx' }}>
+                  内容无变化
+                </Text>
+              )}
+
+              <View style={{ padding: '16rpx', background: '#FFF8F0', borderRadius: '12rpx', marginTop: '24rpx' }}>
+                <Text style={{ fontSize: '24rpx', color: '#FF7A00', fontWeight: 500, display: 'block', marginBottom: '8rpx' }}>
+                  📝 版本说明（当前填写）
+                </Text>
+                <Text style={{ fontSize: '24rpx', color: '#4E5969', lineHeight: 1.5 }}>
+                  {versionNote || '（未填写）'}
+                </Text>
+              </View>
+            </ScrollView>
+            <View style={{ display: 'flex', gap: '16rpx', padding: '16rpx 32rpx 32rpx' }}>
+              <Button
+                className={styles.btnGhost}
+                style={{ flex: 1 }}
+                onClick={() => setDiffModal({ visible: false, diff: null, prevTpl: null })}
+              >
+                返回修改
+              </Button>
+              <Button
+                className={styles.btnPrimary}
+                style={{ flex: 2 }}
+                onClick={doGenerate}
+              >
+                确认生成 v{diffModal.prevTpl ? diffModal.prevTpl.version + 1 : 1}
+              </Button>
+            </View>
           </View>
         </View>
       )}

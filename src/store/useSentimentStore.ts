@@ -89,10 +89,19 @@ interface SentimentStore {
     adaptiveCheckMinutes: number;
   };
 
-  addSyncTemplate: (tpl: Omit<SyncTemplate, 'id' | 'generatedAt' | 'generatedBy' | 'version' | 'previousId' | 'versionNote'> & { versionNote?: string }) => void;
+  getLatestSyncForIncident: (incidentId: string) => SyncTemplate | null;
+  getSyncChainForIncident: (incidentId: string) => SyncTemplate[];
+
+  addSyncTemplate: (tpl: Omit<SyncTemplate, 'id' | 'generatedAt' | 'generatedBy' | 'version' | 'previousId' | 'versionNote'> & { versionNote?: string }) => SyncTemplate;
 
   getIncidentNextCheckTime: (incident: Incident) => string | null;
   getSortedByUrgency: () => Incident[];
+
+  confirmShiftHandover: (payload: {
+    fromUser: string;
+    toUser: string;
+    incidentNotes: Array<{ incidentId: string; note: string; read: boolean }>;
+  }) => void;
 
   updateIncident: (id: string, patch: Partial<Incident>) => void;
 }
@@ -379,6 +388,18 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
     });
   },
 
+  getLatestSyncForIncident: (incidentId) => {
+    const chain = get().getSyncChainForIncident(incidentId);
+    return chain[0] || null;
+  },
+
+  getSyncChainForIncident: (incidentId) => {
+    return get()
+      .syncTemplates
+      .filter((t) => t.incidentId === incidentId)
+      .sort((a, b) => b.version - a.version);
+  },
+
   addSyncTemplate: (tpl) => {
     const now = new Date().toISOString();
     const { syncTemplates } = get();
@@ -419,6 +440,38 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
       )
     }));
     console.log('[Store] addSyncTemplate:', newTpl.id, 'v' + version);
+    return newTpl;
+  },
+
+  confirmShiftHandover: ({ fromUser, toUser, incidentNotes }) => {
+    const now = new Date().toISOString();
+    set((s) => ({
+      incidents: s.incidents.map((i) => {
+        const note = incidentNotes.find((n) => n.incidentId === i.id);
+        if (!note) return i;
+        return {
+          ...i,
+          timeline: [
+            ...i.timeline,
+            {
+              id: uid('EVT'),
+              type: 'shift_handover' as TimelineEventType,
+              time: now,
+              actor: toUser,
+              title: `交接班确认（${fromUser} → ${toUser}）`,
+              description: note.note
+                ? `接班确认：已阅读。交接备注：${note.note}`
+                : '接班确认：已阅读',
+              handoverFrom: fromUser,
+              handoverTo: toUser,
+              handoverNote: note.note
+            }
+          ],
+          updatedAt: now
+        };
+      })
+    }));
+    console.log('[Store] confirmShiftHandover:', { fromUser, toUser, count: incidentNotes.length });
   },
 
   updateIncident: (id, patch) => {

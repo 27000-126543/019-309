@@ -29,6 +29,7 @@ const DisposalTimeline: React.FC<DisposalTimelineProps> = ({ incident }) => {
     if (types.includes('judge')) pct = 30;
     if (types.includes('assign')) pct = 50;
     if (types.includes('dept_feedback') || types.includes('dept_reject')) pct = 75;
+    if (types.includes('shift_handover')) pct = 85;
     if (types.includes('generate_sync')) pct = 100;
     return pct;
   };
@@ -41,6 +42,7 @@ const DisposalTimeline: React.FC<DisposalTimelineProps> = ({ incident }) => {
     dept_feedback: styles.dotTypeFeedback,
     dept_reject: styles.dotTypeReject,
     generate_sync: styles.dotTypeSync,
+    shift_handover: styles.dotTypeHandover,
     status_change: styles.dotTypeStatus,
     note: styles.dotTypeNote
   };
