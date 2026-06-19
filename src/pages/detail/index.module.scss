@@ -1,0 +1,371 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 180rpx;
+}
+
+.header {
+  background: linear-gradient(180deg, #1D2129 0%, #2D323A 100%);
+  padding: $spacing-xl $page-padding $spacing-xl;
+  color: $color-text-white;
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -80rpx;
+  right: -40rpx;
+  width: 280rpx;
+  height: 280rpx;
+  background: radial-gradient(circle, rgba(245,63,63,0.2) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+.idBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+  position: relative;
+  z-index: 1;
+}
+
+.idText {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: $font-size-sm;
+  color: rgba(255,255,255,0.6);
+}
+
+.urgencyBadge {
+  padding: 6rpx 20rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $color-text-white;
+}
+
+.urgencyCritical { background: $color-alert-red; }
+.urgencyHigh { background: $color-alert-orange; }
+.urgencyMedium { background: $color-alert-yellow; color: $color-text-primary; }
+.urgencyLow { background: $color-alert-green; }
+
+.title {
+  font-size: 40rpx;
+  font-weight: $font-weight-bold;
+  line-height: $line-height-tight;
+  margin-bottom: $spacing-md;
+  position: relative;
+  z-index: 1;
+}
+
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm $spacing-md;
+  position: relative;
+  z-index: 1;
+  margin-bottom: $spacing-md;
+}
+
+.metaTag {
+  padding: 6rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.catMedia { background: rgba(114,46,209,0.25); color: #D6B8FF; }
+.catInvestor { background: rgba(22,93,255,0.25); color: #B8D0FF; }
+.catComplaint { background: rgba(245,63,63,0.25); color: #FFB8B8; }
+
+.heatTag {
+  background: rgba(245,63,63,0.18);
+  color: #FF8080;
+}
+
+.trendTag {
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.85);
+}
+
+.summary {
+  font-size: $font-size-md;
+  line-height: $line-height-loose;
+  color: rgba(255,255,255,0.85);
+  padding: $spacing-md;
+  background: rgba(255,255,255,0.06);
+  border-radius: $radius-md;
+  border-left: 4rpx solid $color-primary-light;
+  position: relative;
+  z-index: 1;
+}
+
+.content {
+  padding: $spacing-md $page-padding;
+  margin-top: -$spacing-sm;
+  position: relative;
+  z-index: 2;
+}
+
+.sectionCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitleMain {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.sectionIcon {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-xs;
+  background: rgba(180,40,45,0.08);
+  color: $color-primary;
+  @include flex-center;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+}
+
+.sectionCount {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  padding: 4rpx 12rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-round;
+}
+
+.evidenceScroll {
+  margin: 0 (-$spacing-lg);
+  padding: 0 $spacing-lg;
+  @include scroll-x-container;
+}
+
+.evidenceItem {
+  @include scroll-x-item(480rpx);
+  margin-right: $spacing-md;
+
+  &:last-child { margin-right: 0; }
+}
+
+.evidenceImgBox {
+  width: 480rpx;
+  height: 320rpx;
+  border-radius: $radius-md;
+  overflow: hidden;
+  margin-bottom: $spacing-xs;
+  background: $color-bg-hover;
+  position: relative;
+}
+
+.evidenceImg {
+  width: 100%;
+  height: 100%;
+}
+
+.evidenceCaption {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  @include text-ellipsis;
+}
+
+.commentList {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.commentCard {
+  padding: $spacing-md;
+  background: $color-bg-page;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-border;
+}
+
+.commentHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xs;
+}
+
+.commentAuthor {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.authorAvatar {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, $color-primary-light, $color-primary);
+  color: $color-text-white;
+  @include flex-center;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+}
+
+.authorName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.authorPlatform {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  padding: 2rpx 10rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-xs;
+  margin-left: 4rpx;
+}
+
+.commentMeta {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.likes {
+  color: $color-alert-red;
+  font-weight: $font-weight-medium;
+}
+
+.commentContent {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+}
+
+.sourceCard {
+  padding: $spacing-md;
+  background: linear-gradient(135deg, rgba(180,40,45,0.04) 0%, rgba(255,125,0,0.04) 100%);
+  border-radius: $radius-md;
+  border: 1rpx solid rgba(180,40,45,0.15);
+  display: flex;
+  gap: $spacing-md;
+}
+
+.sourceIcon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: $radius-md;
+  background: linear-gradient(135deg, $color-primary, $color-alert-orange);
+  color: $color-text-white;
+  @include flex-center;
+  font-size: 28rpx;
+  font-weight: $font-weight-bold;
+  flex-shrink: 0;
+}
+
+.sourceBody {
+  flex: 1;
+}
+
+.sourceLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: 6rpx;
+}
+
+.sourceContent {
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+}
+
+.sourceTime {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  margin-top: $spacing-xs;
+  display: block;
+}
+
+.footerBar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  padding: $spacing-md $page-padding;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background: $color-bg-card;
+  border-top: 1rpx solid $color-divider;
+  box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.06);
+  display: flex;
+  gap: $spacing-sm;
+  z-index: 100;
+}
+
+.btnGhost {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  background: $color-bg-page;
+  color: $color-text-secondary;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  border: 1rpx solid $color-border;
+
+  &:active { background: $color-bg-hover; }
+}
+
+.btnPrimary {
+  @include button-reset;
+  flex: 2;
+  height: $button-height-lg;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  box-shadow: 0 8rpx 24rpx rgba(180,40,45,0.25);
+
+  &:active { transform: scale(0.98); }
+}
+
+.btnSecondary {
+  @include button-reset;
+  flex: 1.5;
+  height: $button-height-lg;
+  background: $color-alert-orange;
+  color: $color-text-white;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+
+  &:active { transform: scale(0.98); }
+}
+
+.emptyTip {
+  padding: $spacing-xl $spacing-md;
+  text-align: center;
+  color: $color-text-tertiary;
+  font-size: $font-size-md;
+  line-height: $line-height-loose;
+}
+
+.formatTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}

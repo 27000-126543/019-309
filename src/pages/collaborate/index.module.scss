@@ -1,0 +1,356 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  background: $color-bg-page;
+  padding-bottom: 180rpx;
+}
+
+.incidentSelector {
+  background: $color-bg-card;
+  padding: $spacing-md $page-padding;
+  border-bottom: 1rpx solid $color-divider;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.selectorLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-bottom: $spacing-xs;
+}
+
+.selectorRow {
+  display: flex;
+  gap: $spacing-sm;
+  overflow-x: auto;
+  @include scroll-x-container;
+}
+
+.selectorItem {
+  @include scroll-x-item(auto);
+  @include button-reset;
+  padding: 14rpx $spacing-md;
+  background: $color-bg-page;
+  border-radius: $radius-button;
+  border: 2rpx solid transparent;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  white-space: nowrap;
+  transition: all $transition-base;
+
+  &:active { opacity: 0.9; }
+}
+
+.selectorItemActive {
+  background: rgba(180,40,45,0.08);
+  border-color: $color-primary;
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.selectorUrgency {
+  display: inline-block;
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  margin-right: 8rpx;
+  vertical-align: middle;
+}
+
+.urgencyCritical { background: $color-alert-red; }
+.urgencyHigh { background: $color-alert-orange; }
+.urgencyMedium { background: $color-alert-yellow; }
+.urgencyLow { background: $color-alert-green; }
+
+.contentArea {
+  padding: $spacing-md $page-padding;
+}
+
+.incidentSummary {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.summaryTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  line-height: $line-height-tight;
+  margin-bottom: $spacing-sm;
+}
+
+.summaryMeta {
+  display: flex;
+  gap: $spacing-md;
+  flex-wrap: wrap;
+  margin-bottom: $spacing-sm;
+}
+
+.metaTag {
+  font-size: $font-size-xs;
+  padding: 4rpx 14rpx;
+  border-radius: $radius-xs;
+  background: rgba(22,93,255,0.08);
+  color: $color-tag-investor;
+}
+
+.summaryDesc {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}
+
+.assigneeSection {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.sectionTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionTip {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  font-weight: $font-weight-normal;
+}
+
+.deptGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+}
+
+.deptCard {
+  @include button-reset;
+  flex-direction: column;
+  padding: $spacing-md $spacing-sm;
+  background: $color-bg-page;
+  border-radius: $radius-md;
+  border: 2rpx solid transparent;
+  transition: all $transition-base;
+  gap: 8rpx;
+
+  &:active { transform: scale(0.97); }
+}
+
+.deptCardActive {
+  background: rgba(180,40,45,0.06);
+  border-color: $color-primary;
+}
+
+.deptIcon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  @include flex-center;
+  font-size: 28rpx;
+  font-weight: $font-weight-bold;
+}
+
+.deptIconLegal { background: rgba(22,93,255,0.12); color: #165DFF; }
+.deptIconBusiness { background: rgba(0,180,42,0.12); color: #00B42A; }
+.deptIconSecretary { background: rgba(114,46,209,0.12); color: #722ED1; }
+
+.deptCardActive .deptIconLegal { background: #165DFF; color: #fff; }
+.deptCardActive .deptIconBusiness { background: #00B42A; color: #fff; }
+.deptCardActive .deptIconSecretary { background: #722ED1; color: #fff; }
+
+.deptName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.deptDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  text-align: center;
+  line-height: $line-height-tight;
+}
+
+.selectedHint {
+  margin-top: $spacing-md;
+  padding: $spacing-sm $spacing-md;
+  background: rgba(0,180,42,0.06);
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  color: $color-alert-green;
+}
+
+.formSection {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.formBlock {
+  margin-bottom: $spacing-lg;
+
+  &:last-child { margin-bottom: 0; }
+}
+
+.formHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.formBadge {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: $radius-xs;
+  @include flex-center;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-bold;
+  color: $color-text-white;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+}
+
+.badgeFact { background: $color-info; }
+.badgePublic { background: $color-alert-green; }
+.badgeBoundary { background: $color-alert-red; }
+
+.formLabel {
+  flex: 1;
+}
+
+.formLabelTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.formLabelHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: $line-height-tight;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 200rpx;
+  padding: $spacing-md;
+  background: $color-bg-page;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-border;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+  box-sizing: border-box;
+}
+
+.textareaPublic { border-color: rgba(0,180,42,0.2); background: rgba(0,180,42,0.03); }
+.textareaBoundary { border-color: rgba(245,63,63,0.2); background: rgba(245,63,63,0.03); }
+
+.footerBar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: $spacing-md $page-padding;
+  padding-bottom: calc(#{$spacing-md} + env(safe-area-inset-bottom));
+  background: $color-bg-card;
+  border-top: 1rpx solid $color-divider;
+  box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.06);
+  display: flex;
+  gap: $spacing-sm;
+  z-index: 100;
+}
+
+.btnSecondary {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  background: $color-bg-page;
+  color: $color-text-secondary;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  border: 1rpx solid $color-border;
+
+  &:active { background: $color-bg-hover; }
+}
+
+.btnPrimary {
+  @include button-reset;
+  flex: 2;
+  height: $button-height-lg;
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  box-shadow: 0 8rpx 24rpx rgba(180,40,45,0.25);
+
+  &:active { transform: scale(0.98); }
+}
+
+.btnPrimaryDisabled {
+  background: $color-text-disabled;
+  box-shadow: none;
+  color: $color-text-white;
+}
+
+.historySection {
+  margin-top: $spacing-lg;
+}
+
+.historyTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.historyCard {
+  background: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-bottom: $spacing-sm;
+  border-left: 4rpx solid $color-alert-green;
+}
+
+.historyHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-xs;
+}
+
+.historyDept {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.historyTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.historyContent {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}

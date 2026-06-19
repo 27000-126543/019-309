@@ -1,0 +1,152 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  border-left: 6rpx solid $color-border;
+  position: relative;
+  overflow: hidden;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.98);
+    box-shadow: $shadow-card-hover;
+  }
+}
+
+.critical { border-left-color: $color-alert-red; background: linear-gradient(135deg, rgba(245,63,63,0.04) 0%, $color-bg-card 30%); }
+.high { border-left-color: $color-alert-orange; background: linear-gradient(135deg, rgba(255,125,0,0.04) 0%, $color-bg-card 30%); }
+.medium { border-left-color: $color-alert-yellow; }
+.low { border-left-color: $color-alert-green; }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: $spacing-sm;
+  gap: $spacing-sm;
+}
+
+.title {
+  flex: 1;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  line-height: $line-height-tight;
+  @include text-ellipsis-multi(2);
+}
+
+.urgencyBadge {
+  flex-shrink: 0;
+  padding: 6rpx 16rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $color-text-white;
+}
+
+.urgencyCritical { background: $color-alert-red; }
+.urgencyHigh { background: $color-alert-orange; }
+.urgencyMedium { background: $color-alert-yellow; color: $color-text-primary; }
+.urgencyLow { background: $color-alert-green; }
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-sm;
+  flex-wrap: wrap;
+}
+
+.categoryTag {
+  padding: 4rpx 14rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.catMedia { background: rgba(114, 46, 209, 0.1); color: $color-tag-media; }
+.catInvestor { background: rgba(22, 93, 255, 0.1); color: $color-tag-investor; }
+.catComplaint { background: rgba(245, 63, 63, 0.1); color: $color-tag-complaint; }
+
+.heatInfo {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.heatValue {
+  font-weight: $font-weight-semibold;
+  color: $color-alert-red;
+}
+
+.trendIcon {
+  font-size: $font-size-sm;
+}
+
+.trendRising { color: $color-alert-red; }
+.trendStable { color: $color-text-tertiary; }
+.trendFalling { color: $color-alert-green; }
+
+.judgeTag {
+  padding: 4rpx 14rpx;
+  border-radius: $radius-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.judgePending { background: rgba(134, 144, 156, 0.1); color: $color-judge-pending; }
+.judgeExaggerate { background: rgba(255, 125, 0, 0.1); color: $color-judge-exaggerate; }
+.judgeOldnews { background: rgba(22, 93, 255, 0.1); color: $color-judge-oldnews; }
+.judgeMalicious { background: rgba(245, 63, 63, 0.1); color: $color-judge-malicious; }
+
+.summary {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+  @include text-ellipsis-multi(2);
+  margin-bottom: $spacing-md;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: $spacing-sm;
+  border-top: 1rpx solid $color-divider;
+}
+
+.timeInfo {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+}
+
+.assigneeList {
+  display: flex;
+  gap: $spacing-xs;
+}
+
+.assigneeTag {
+  padding: 4rpx 12rpx;
+  background: $color-bg-hover;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+}
+
+.statusTag {
+  padding: 4rpx 14rpx;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
+.statusOpen { background: rgba(245, 63, 63, 0.08); color: $color-alert-red; }
+.statusAssigned { background: rgba(255, 125, 0, 0.08); color: $color-alert-orange; }
+.statusConfirmed { background: rgba(0, 180, 42, 0.08); color: $color-alert-green; }
+.statusClosed { background: rgba(134, 144, 156, 0.08); color: $color-text-tertiary; }

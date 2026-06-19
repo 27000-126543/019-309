@@ -1,0 +1,149 @@
+@use '@/styles/variables.scss' as *;
+
+.container {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.heatBadge {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 6rpx 16rpx;
+  background: rgba(245, 63, 63, 0.08);
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  color: $color-alert-red;
+  font-weight: $font-weight-medium;
+}
+
+.chartArea {
+  position: relative;
+  height: 280rpx;
+  padding: $spacing-sm 0 $spacing-lg 0;
+}
+
+.gridLines {
+  position: absolute;
+  top: $spacing-sm;
+  bottom: $spacing-lg;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.gridLine {
+  height: 1rpx;
+  background: $color-divider;
+}
+
+.yAxisLabels {
+  position: absolute;
+  top: $spacing-sm;
+  bottom: $spacing-lg;
+  left: 0;
+  width: 80rpx;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.yLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  transform: translateY(-50%);
+}
+
+.chartCanvas {
+  margin-left: 80rpx;
+  height: 100%;
+  position: relative;
+}
+
+.svgRoot {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.linePath {
+  fill: none;
+  stroke: $color-alert-red;
+  stroke-width: 4rpx;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.areaPath {
+  fill: url(#heatGradient);
+  opacity: 0.15;
+}
+
+.pointCircle {
+  fill: $color-bg-card;
+  stroke: $color-alert-red;
+  stroke-width: 3rpx;
+}
+
+.pointCircleActive {
+  fill: $color-alert-red;
+  stroke: $color-bg-card;
+  stroke-width: 4rpx;
+  r: 8;
+  filter: drop-shadow(0 2rpx 6rpx rgba(245, 63, 63, 0.4));
+}
+
+.xAxisLabels {
+  display: flex;
+  justify-content: space-between;
+  margin-left: 80rpx;
+  padding-top: $spacing-xs;
+}
+
+.xLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  text-align: center;
+  flex: 1;
+}
+
+.tooltip {
+  position: absolute;
+  background: rgba(29, 33, 41, 0.92);
+  color: $color-text-white;
+  padding: 12rpx 20rpx;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translate(-50%, -120%);
+  z-index: 10;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -10rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 8rpx solid transparent;
+  border-top-color: rgba(29, 33, 41, 0.92);
+}

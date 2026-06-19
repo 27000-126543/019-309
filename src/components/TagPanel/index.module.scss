@@ -1,0 +1,84 @@
+@use '@/styles/variables.scss' as *;
+
+.panel {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+}
+
+.title {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.tagGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.tagBtn {
+  @include button-reset;
+  padding: 20rpx $spacing-md;
+  border-radius: $radius-md;
+  border: 2rpx solid $color-border;
+  background: $color-bg-page;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+.tagBtnActive {
+  border-width: 2rpx;
+}
+
+.tagPending { border-color: $color-judge-pending; background: rgba(134, 144, 156, 0.08); }
+.tagExaggerate { border-color: $color-judge-exaggerate; background: rgba(255, 125, 0, 0.08); }
+.tagOldnews { border-color: $color-judge-oldnews; background: rgba(22, 93, 255, 0.08); }
+.tagMalicious { border-color: $color-judge-malicious; background: rgba(245, 63, 63, 0.08); }
+
+.tagLabel {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  margin-bottom: 6rpx;
+}
+
+.tagLabelPending { color: $color-judge-pending; }
+.tagLabelExaggerate { color: $color-judge-exaggerate; }
+.tagLabelOldnews { color: $color-judge-oldnews; }
+.tagLabelMalicious { color: $color-judge-malicious; }
+
+.tagDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  line-height: $line-height-tight;
+}
+
+.noteArea {
+  width: 100%;
+  min-height: 160rpx;
+  padding: $spacing-md;
+  background: $color-bg-page;
+  border-radius: $radius-md;
+  border: 1rpx solid $color-border;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  line-height: $line-height-normal;
+  box-sizing: border-box;
+}
+
+.noteLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+  display: block;
+}
