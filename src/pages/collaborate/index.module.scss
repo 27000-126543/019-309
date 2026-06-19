@@ -107,6 +107,10 @@
   &.pending {
     opacity: 0.75;
   }
+  &.rejected {
+    background: rgba(255,255,255,0.96);
+    border-color: rgba(245,63,63,0.25);
+  }
   &.unassigned {
     opacity: 0.4;
   }
@@ -129,6 +133,7 @@
   &.statusSubmitted { color: $color-alert-green; font-weight: $font-weight-semibold; }
   &.statusInProgress { color: $color-alert-orange; }
   &.statusPending { color: $color-text-tertiary; }
+  &.statusRejected { color: $color-primary; font-weight: $font-weight-semibold; }
   &.statusUnassigned { color: $color-text-tertiary; }
 }
 
@@ -164,6 +169,10 @@
   }
   &.cardPending {
     opacity: 0.85;
+  }
+  &.cardRejected {
+    border-color: rgba(245,63,63,0.4);
+    box-shadow: 0 4rpx 16rpx rgba(245,63,63,0.08);
   }
   &.cardUnassigned {
     opacity: 0.55;
@@ -219,6 +228,7 @@
   &.statusSubmitted { background: rgba(82,196,26,0.12); color: $color-alert-green; }
   &.statusInProgress { background: rgba(255,125,0,0.12); color: $color-alert-orange; }
   &.statusPending { background: $color-bg-hover; color: $color-text-tertiary; }
+  &.statusRejected { background: rgba(245,63,63,0.12); color: $color-primary; }
   &.statusUnassigned { background: $color-bg-hover; color: $color-text-tertiary; }
 }
 
@@ -320,6 +330,33 @@
   }
 }
 
+.rejectInfo {
+  padding: $spacing-sm $spacing-md;
+  background: rgba(245,63,63,0.06);
+  border-radius: $radius-md;
+  border: 1rpx solid rgba(245,63,63,0.15);
+  margin-bottom: $spacing-md;
+}
+
+.rejectLabel {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.rejectText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-normal;
+}
+
+.rejectTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+  display: block;
+}
+
 .deptCardFooter {
   display: flex;
   align-items: center;
@@ -332,6 +369,23 @@
 .lastUpdate {
   font-size: $font-size-xs;
   color: $color-text-tertiary;
+}
+
+.footerBtns {
+  display: flex;
+  gap: $spacing-sm;
+  align-items: center;
+}
+
+.rejectBtn {
+  @include button-reset;
+  padding: 0 $spacing-md;
+  height: 64rpx;
+  background: rgba(245,63,63,0.08);
+  color: $color-primary;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
 }
 
 .saveBtn {

@@ -11,6 +11,7 @@ type FilterType = 'all' | IncidentCategory;
 
 const IndexPage: React.FC = () => {
   const incidents = useSentimentStore((s) => s.incidents);
+  const setCurrentIncidentId = useSentimentStore((s) => s.setCurrentIncidentId);
   const [filter, setFilter] = useState<FilterType>('all');
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -55,6 +56,7 @@ const IndexPage: React.FC = () => {
   }, [incidents]);
 
   const handleCardClick = (incident: Incident) => {
+    setCurrentIncidentId(incident.id);
     Taro.navigateTo({
       url: `/pages/detail/index?id=${incident.id}`
     });

@@ -37,6 +37,10 @@ function makeFeedback(
     publicStatement: '',
     noResponseBoundary: '',
     assigneeName: names[dept],
+    rejectedAt: null,
+    rejectedBy: null,
+    rejectReason: '',
+    resubmitCount: 0,
     ...overrides
   };
 }
@@ -332,7 +336,15 @@ export const mockSyncTemplates: SyncTemplate[] = [
     ],
     nextCheckTime: '6月19日 15:30（收盘复盘）',
     content: '',
-    generatedBy: '张经理'
+    generatedBy: '张经理',
+    snapshotHeat: 2180,
+    snapshotJudgeTag: 'pending',
+    snapshotJudgeNote: '正在核实完整通话录音上下文',
+    snapshotDeptStatus: { legal: 'submitted', business: 'submitted', secretary: null },
+    snapshotFactStatement: '【法务部】法务审核结论：1、公司7天无理由退货政策符合消法规定；2、客服不当言论不构成法律责任，但建议整改话术；3、如对外声明需谨慎措辞，避免承认"产品质量问题"。\n\n【业务部门】业务部已调取完整通话录音及客服工单：客户于6月15日购买XX型号产品，6月17日提出"7天无理由退货"，因包装已拆封影响二次销售，客服沟通时表示需检测后处理，但用词确实不规范（"你自己看着办"等）。不存在拒绝售后，已与客户电话沟通并达成全额退款+200元购物券和解，客户同意删除原帖。',
+    snapshotPublicStatement: '【法务部】针对近期网传售后沟通事件，我司高度重视。经内部核查，该事件系沟通表达不当引发的误解，我们已第一时间与客户达成谅解。公司将对相关人员进行服务培训，持续提升客户体验。感谢社会各界监督。',
+    snapshotNoResponseBoundary: '【法务部】1. 不公开客户个人信息及联系方式；2. 不回应"内部管理混乱""店大欺客"等过度延伸指责；3. 不与任何自媒体或当事人打口水仗；4. 不披露具体和解金额及购物券金额；5. 不主动提及其他历史投诉案例。',
+    adaptiveCheckMinutes: 180
   },
   {
     id: 'SYNC-002',
@@ -351,6 +363,14 @@ export const mockSyncTemplates: SyncTemplate[] = [
     ],
     nextCheckTime: '6月19日 14:30（公告发布后复盘）',
     content: '',
-    generatedBy: '张经理'
+    generatedBy: '张经理',
+    snapshotHeat: 4320,
+    snapshotJudgeTag: 'malicious',
+    snapshotJudgeNote: '经财务和法务初步核实，公司经营正常，现金流充裕，该信息为100%伪造。已启动公证处电子证据存证程序，同步联系平台方。',
+    snapshotDeptStatus: { legal: 'in_progress', business: 'submitted', secretary: 'in_progress' },
+    snapshotFactStatement: '【法务部】法务部已完成：1、上海某公证处电子证据存证（存证编号SH-GZ-2026-XXXXXX）；2、联系微信安全中心举报12个核心传播群；3、律师函草拟中，预计1小时后定稿。正在排查源头IP地址。\n\n【业务部门】业务部核实：公司目前在手订单充足（Q2已完成全年目标65%），与前5大客户合作稳定，主要供应商账期未变。一线销售未出现异常退换货。经营一切正常。\n\n【董秘办】董秘办已：1、对接交易所报备该事项；2、草拟《关于不实信息的澄清公告》，待法务审定后走公告流程；3、同步机构投资者关系团队，准备定向沟通口径。',
+    snapshotPublicStatement: '',
+    snapshotNoResponseBoundary: '',
+    adaptiveCheckMinutes: 90
   }
 ];

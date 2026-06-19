@@ -20,9 +20,10 @@ const DetailPage: React.FC = () => {
   const paramId = router.params.id as string;
   const incidents = useSentimentStore((s) => s.incidents);
   const setJudge = useSentimentStore((s) => s.setJudge);
+  const setCurrentIncidentId = useSentimentStore((s) => s.setCurrentIncidentId);
 
   const incident: Incident | undefined = useSentimentStore((s) =>
-    s.incidents.find((i) => i.id === paramId) || s.incidents[0]
+    s.incidents.find((i) => i.id === (paramId || s.currentIncidentId)) || s.incidents[0]
   );
 
   const fallbackId = incident?.id || 'INC-001';
@@ -34,6 +35,7 @@ const DetailPage: React.FC = () => {
     if (fresh) {
       setLocalJudge(fresh.judgeTag);
       setLocalNote(fresh.judgeNote);
+      setCurrentIncidentId(fresh.id);
     }
     console.log('[Detail] 页面展示，事项ID:', fallbackId);
   });
@@ -89,10 +91,12 @@ const DetailPage: React.FC = () => {
     if (localJudge !== incident.judgeTag || localNote !== incident.judgeNote) {
       setJudge(incident.id, localJudge, localNote);
     }
+    setCurrentIncidentId(incident.id);
     Taro.switchTab({ url: '/pages/collaborate/index' });
   };
 
   const handleSync = () => {
+    setCurrentIncidentId(incident.id);
     Taro.switchTab({ url: '/pages/summary/index' });
   };
 

@@ -131,7 +131,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onClick }) => {
                 )}
               >
                 {DEPT_LABELS[f.dept]}
-                {f.status === 'submitted' ? ' ✓' : f.status === 'in_progress' ? ' ···' : ''}
+                {f.status === 'submitted' ? ' ✓' : f.status === 'in_progress' ? ' ···' : f.status === 'rejected' ? ' !' : ''}
               </View>
             ))}
             {submittedCount > 0 && (

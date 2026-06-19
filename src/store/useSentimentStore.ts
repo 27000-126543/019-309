@@ -5,11 +5,15 @@ import {
   JudgeTag,
   AssigneeDept,
   DeptFeedback,
+  DeptFeedbackStatus,
   TimelineEvent,
   TimelineEventType,
   DEPT_LABELS,
   JUDGE_LABELS,
-  IncidentCategory
+  IncidentCategory,
+  UrgencyLevel,
+  getAdaptiveRhythm,
+  CATEGORY_TEMPLATES
 } from '@/types/sentiment';
 
 const CURRENT_USER = '张经理';
@@ -40,8 +44,10 @@ interface SentimentStore {
   incidents: Incident[];
   syncTemplates: SyncTemplate[];
   currentUser: string;
+  currentIncidentId: string;
 
   getIncident: (id: string) => Incident | undefined;
+  setCurrentIncidentId: (id: string) => void;
   addTimelineEvent: (incidentId: string, event: Omit<TimelineEvent, 'id' | 'time'>) => void;
 
   setJudge: (incidentId: string, tag: JudgeTag | null, note: string) => void;
@@ -61,6 +67,7 @@ interface SentimentStore {
       noResponseBoundary: string;
     }
   ) => void;
+  rejectDeptFeedback: (incidentId: string, dept: AssigneeDept, reason: string) => void;
 
   getMergedFeedback: (incident: Incident) => {
     factStatement: string;
@@ -68,17 +75,42 @@ interface SentimentStore {
     noResponseBoundary: string;
   };
 
+  getDeptStatusSnapshot: (incident: Incident) => Record<AssigneeDept, DeptFeedbackStatus | null>;
+
+  buildSyncSnapshot: (incident: Incident) => {
+    snapshotHeat: number;
+    snapshotJudgeTag: JudgeTag | null;
+    snapshotJudgeNote: string;
+    snapshotDeptStatus: Record<AssigneeDept, DeptFeedbackStatus | null>;
+    snapshotFactStatement: string;
+    snapshotPublicStatement: string;
+    snapshotNoResponseBoundary: string;
+    adaptiveCheckMinutes: number;
+  };
+
   addSyncTemplate: (tpl: Omit<SyncTemplate, 'id' | 'generatedAt' | 'generatedBy'>) => void;
 
   updateIncident: (id: string, patch: Partial<Incident>) => void;
 }
 
+const EMPTY_DEPT_STATUS: Record<AssigneeDept, DeptFeedbackStatus | null> = {
+  legal: null,
+  business: null,
+  secretary: null
+};
+
 export const useSentimentStore = create<SentimentStore>((set, get) => ({
   incidents: [],
   syncTemplates: [],
   currentUser: CURRENT_USER,
+  currentIncidentId: '',
 
   getIncident: (id) => get().incidents.find((i) => i.id === id),
+
+  setCurrentIncidentId: (id) => {
+    set({ currentIncidentId: id });
+    console.log('[Store] setCurrentIncidentId:', id);
+  },
 
   addTimelineEvent: (incidentId, event) => {
     set((s) => ({
@@ -97,6 +129,7 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
   setJudge: (incidentId, tag, note) => {
     const now = new Date().toISOString();
     set((s) => ({
+      currentIncidentId: incidentId,
       incidents: s.incidents.map((i) => {
         if (i.id !== incidentId) return i;
         const title = tag
@@ -124,6 +157,7 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
   assignDept: (incidentId, depts) => {
     const now = new Date().toISOString();
     set((s) => ({
+      currentIncidentId: incidentId,
       incidents: s.incidents.map((i) => {
         if (i.id !== incidentId) return i;
 
@@ -145,7 +179,11 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
               factStatement: '',
               publicStatement: '',
               noResponseBoundary: '',
-              assigneeName: assignedNames[dept]
+              assigneeName: assignedNames[dept],
+              rejectedAt: null,
+              rejectedBy: null,
+              rejectReason: '',
+              resubmitCount: 0
             };
             newEvents.push(
               createTimelineEvent(
@@ -197,6 +235,7 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
         if (i.id !== incidentId) return i;
         const fb = i.feedbacks[dept];
         if (!fb) return i;
+        const isResubmit = fb.resubmitCount > 0;
         return {
           ...i,
           feedbacks: {
@@ -205,7 +244,8 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
               ...fb,
               ...feedback,
               status: 'submitted',
-              respondedAt: now
+              respondedAt: now,
+              resubmitCount: isResubmit ? fb.resubmitCount : fb.resubmitCount
             }
           },
           timeline: [
@@ -213,8 +253,12 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
             createTimelineEvent(
               'dept_feedback',
               fb.assigneeName,
-              `${DEPT_LABELS[dept]}已反馈`,
-              `事实说明已填写 ${feedback.factStatement.length} 字，口径已审定`,
+              isResubmit
+                ? `${DEPT_LABELS[dept]}再次反馈（第${fb.resubmitCount}次补充）`
+                : `${DEPT_LABELS[dept]}已反馈`,
+              isResubmit
+                ? `补充后事实说明 ${feedback.factStatement.length} 字，口径已更新`
+                : `事实说明已填写 ${feedback.factStatement.length} 字，口径已审定`,
               dept
             )
           ],
@@ -223,6 +267,43 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
       })
     }));
     console.log('[Store] submitDeptFeedback:', { incidentId, dept });
+  },
+
+  rejectDeptFeedback: (incidentId, dept, reason) => {
+    const now = new Date().toISOString();
+    set((s) => ({
+      incidents: s.incidents.map((i) => {
+        if (i.id !== incidentId) return i;
+        const fb = i.feedbacks[dept];
+        if (!fb || fb.status !== 'submitted') return i;
+        return {
+          ...i,
+          feedbacks: {
+            ...i.feedbacks,
+            [dept]: {
+              ...fb,
+              status: 'rejected' as DeptFeedbackStatus,
+              rejectedAt: now,
+              rejectedBy: s.currentUser,
+              rejectReason: reason,
+              resubmitCount: fb.resubmitCount + 1
+            }
+          },
+          timeline: [
+            ...i.timeline,
+            createTimelineEvent(
+              'dept_reject',
+              s.currentUser,
+              `退回${DEPT_LABELS[dept]}反馈`,
+              `原因：${reason || '需补充信息'}`,
+              dept
+            )
+          ],
+          updatedAt: now
+        };
+      })
+    }));
+    console.log('[Store] rejectDeptFeedback:', { incidentId, dept, reason });
   },
 
   getMergedFeedback: (incident) => {
@@ -236,6 +317,31 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
       factStatement: merge('factStatement'),
       publicStatement: merge('publicStatement'),
       noResponseBoundary: merge('noResponseBoundary')
+    };
+  },
+
+  getDeptStatusSnapshot: (incident) => {
+    const result = { ...EMPTY_DEPT_STATUS };
+    (Object.keys(incident.feedbacks) as AssigneeDept[]).forEach((d) => {
+      result[d] = incident.feedbacks[d]?.status || null;
+    });
+    return result;
+  },
+
+  buildSyncSnapshot: (incident) => {
+    const merged = get().getMergedFeedback(incident);
+    const category: IncidentCategory = incident.category;
+    const urgency: UrgencyLevel = incident.urgency;
+    const rhythm = getAdaptiveRhythm(category, urgency, incident.heat);
+    return {
+      snapshotHeat: incident.heat,
+      snapshotJudgeTag: incident.judgeTag,
+      snapshotJudgeNote: incident.judgeNote,
+      snapshotDeptStatus: get().getDeptStatusSnapshot(incident),
+      snapshotFactStatement: merged.factStatement,
+      snapshotPublicStatement: merged.publicStatement,
+      snapshotNoResponseBoundary: merged.noResponseBoundary,
+      adaptiveCheckMinutes: rhythm.checkMinutes
     };
   },
 
@@ -280,10 +386,10 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
 }));
 
 export function hydrateStore(incidents: Incident[], templates: SyncTemplate[]) {
-  useSentimentStore.setState({ incidents, syncTemplates: templates });
-}
-
-export function getCategoryFromIncidentId(incidentId: string): IncidentCategory | null {
-  const inc = useSentimentStore.getState().incidents.find((i) => i.id === incidentId);
-  return inc?.category || null;
+  const firstId = incidents[0]?.id || '';
+  useSentimentStore.setState({
+    incidents,
+    syncTemplates: templates,
+    currentIncidentId: firstId
+  });
 }

@@ -10,29 +10,44 @@ import {
   SyncTemplate,
   CATEGORY_LABELS,
   URGENCY_LABELS,
-  CATEGORY_TEMPLATES
+  JUDGE_LABELS,
+  DEPT_LABELS,
+  CATEGORY_TEMPLATES,
+  getAdaptiveRhythm,
+  AssigneeDept,
+  DeptFeedbackStatus
 } from '@/types/sentiment';
+
+const DEPT_ORDER: AssigneeDept[] = ['legal', 'business', 'secretary'];
 
 const SummaryPage: React.FC = () => {
   const incidents = useSentimentStore((s) => s.incidents);
+  const currentIncidentId = useSentimentStore((s) => s.currentIncidentId);
   const syncTemplates = useSentimentStore((s) => s.syncTemplates);
   const getMergedFeedback = useSentimentStore((s) => s.getMergedFeedback);
+  const buildSyncSnapshot = useSentimentStore((s) => s.buildSyncSnapshot);
   const addSyncTemplate = useSentimentStore((s) => s.addSyncTemplate);
+  const setCurrentIncidentId = useSentimentStore((s) => s.setCurrentIncidentId);
 
-  const [selectedId, setSelectedId] = useState<string>(incidents[0]?.id || '');
   const [pickerVisible, setPickerVisible] = useState(false);
-
   const [progressText, setProgressText] = useState<string>('');
   const [actions, setActions] = useState<string[]>([]);
   const [nextCheckTime, setNextCheckTime] = useState<string>('');
+  const [detailTpl, setDetailTpl] = useState<SyncTemplate | null>(null);
+
+  const activeId = currentIncidentId || incidents[0]?.id || '';
 
   const incident: Incident | undefined = useMemo(
-    () => incidents.find((i) => i.id === selectedId),
-    [incidents, selectedId]
+    () => incidents.find((i) => i.id === activeId),
+    [incidents, activeId]
   );
 
   const category: IncidentCategory = incident?.category || 'media';
   const tplConfig = CATEGORY_TEMPLATES[category];
+  const rhythm = useMemo(() => {
+    if (!incident) return { checkMinutes: 60, label: '每60分钟', extraActions: [] };
+    return getAdaptiveRhythm(incident.category, incident.urgency, incident.heat);
+  }, [incident]);
 
   const resetForm = (inc: Incident) => {
     const merged = getMergedFeedback(inc);
@@ -41,28 +56,36 @@ const SummaryPage: React.FC = () => {
       .map((s) => s.replace(/\n+/g, ' ').slice(0, 80))
       .join(' ');
 
+    const heatInfo = `当前热度 ${inc.heat.toLocaleString()}，${inc.heatTrend === 'rising' ? '↑ 升温' : inc.heatTrend === 'falling' ? '↓ 降温' : '→ 平稳'}`;
+    const judgeInfo = inc.judgeTag ? `初判：${JUDGE_LABELS[inc.judgeTag]}` : '尚无初判';
+    const deptInfo = DEPT_ORDER
+      .filter((d) => inc.feedbacks[d]?.status === 'submitted')
+      .map((d) => DEPT_LABELS[d])
+      .join('、');
+    const deptLine = deptInfo ? `已反馈部门：${deptInfo}` : '尚无部门反馈';
+
     const defaultProgress = factsParts
-      ? `${factsParts}。${tplConfig.progressTemplate}`
-      : tplConfig.progressTemplate;
+      ? `${heatInfo}。${judgeInfo}。${deptLine}。${factsParts}。${tplConfig.progressTemplate}`
+      : `${heatInfo}。${judgeInfo}。${deptLine}。${tplConfig.progressTemplate}`;
 
     setProgressText(defaultProgress);
-    setActions([...tplConfig.suggestedActions]);
+    setActions([...tplConfig.suggestedActions, ...rhythm.extraActions]);
 
-    const defaultNext = new Date(Date.now() + tplConfig.defaultNextCheckMinutes * 60 * 1000);
+    const defaultNext = new Date(Date.now() + rhythm.checkMinutes * 60 * 1000);
     const nextStr = `${defaultNext.getMonth() + 1}月${defaultNext.getDate()}日 ${String(defaultNext.getHours()).padStart(2, '0')}:${String(defaultNext.getMinutes()).padStart(2, '0')}`;
     setNextCheckTime(nextStr);
   };
 
   useDidShow(() => {
-    const fresh = incidents.find((i) => i.id === selectedId);
+    const fresh = incidents.find((i) => i.id === activeId);
     if (fresh) resetForm(fresh);
-    console.log('[Summary] 页面展示，当前事项:', selectedId, '模板条数:', syncTemplates.length);
+    console.log('[Summary] 页面展示，当前事项:', activeId, '模板条数:', syncTemplates.length);
   });
 
   useEffect(() => {
     if (incident && !progressText) resetForm(incident);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, incident?.id]);
+  }, [activeId, incident?.id]);
 
   void syncTemplates;
 
@@ -86,8 +109,7 @@ const SummaryPage: React.FC = () => {
 
   const handleActionDel = (idx: number) => {
     if (actions.length <= 1) return;
-    const next = actions.filter((_, i) => i !== idx);
-    setActions(next);
+    setActions(actions.filter((_, i) => i !== idx));
   };
 
   const handleGenerate = () => {
@@ -99,25 +121,36 @@ const SummaryPage: React.FC = () => {
       Taro.showToast({ title: '请至少填写一条建议动作', icon: 'none' });
       return;
     }
+    const snapshot = buildSyncSnapshot(incident);
     addSyncTemplate({
       incidentId: incident.id,
       incidentTitle: incident.title,
-      category: incident.category,
+      incidentCategory: incident.category,
       progressText: progressText.trim(),
       suggestedActions: actions.filter((a) => a.trim()),
       nextCheckTime: nextCheckTime.trim() || '待确认',
-      factStatement: getMergedFeedback(incident).factStatement,
-      publicStatement: getMergedFeedback(incident).publicStatement,
-      noResponseBoundary: getMergedFeedback(incident).noResponseBoundary
+      factStatement: snapshot.snapshotFactStatement,
+      publicStatement: snapshot.snapshotPublicStatement,
+      noResponseBoundary: snapshot.snapshotNoResponseBoundary,
+      content: '',
+      snapshotHeat: snapshot.snapshotHeat,
+      snapshotJudgeTag: snapshot.snapshotJudgeTag,
+      snapshotJudgeNote: snapshot.snapshotJudgeNote,
+      snapshotDeptStatus: snapshot.snapshotDeptStatus,
+      snapshotFactStatement: snapshot.snapshotFactStatement,
+      snapshotPublicStatement: snapshot.snapshotPublicStatement,
+      snapshotNoResponseBoundary: snapshot.snapshotNoResponseBoundary,
+      adaptiveCheckMinutes: snapshot.adaptiveCheckMinutes
     });
     Taro.showToast({ title: '同步模板已生成', icon: 'success' });
   };
 
   const handleReuse = (tpl: SyncTemplate) => {
-    setSelectedId(tpl.incidentId);
-    setProgressText(tpl.progressText);
+    setCurrentIncidentId(tpl.incidentId);
+    setProgressText(tpl.progress);
     setActions([...tpl.suggestedActions]);
     setNextCheckTime(tpl.nextCheckTime);
+    setDetailTpl(null);
     Taro.showToast({ title: `已复用「${tpl.incidentTitle.slice(0, 10)}」的同步模板`, icon: 'none' });
   };
 
@@ -143,8 +176,20 @@ const SummaryPage: React.FC = () => {
     return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
 
-  const historyForCurrent = syncTemplates.filter((t) => t.incidentId === incident.id);
   const historyAll = syncTemplates;
+
+  const renderDeptStatusTags = (deptStatus: Record<AssigneeDept, DeptFeedbackStatus | null>) => {
+    return DEPT_ORDER.map((d) => {
+      const s = deptStatus[d];
+      if (!s) return null;
+      const label = s === 'submitted' ? '✓ 已反馈' : s === 'in_progress' ? '··· 处理中' : s === 'rejected' ? '! 需补充' : '待处理';
+      return (
+        <View key={d} className={styles.historyTag}>
+          {DEPT_LABELS[d]}：{label}
+        </View>
+      );
+    });
+  };
 
   return (
     <ScrollView scrollY className={styles.page} enhanced showScrollbar={false}>
@@ -173,7 +218,7 @@ const SummaryPage: React.FC = () => {
             <View className={styles.badge}>{CATEGORY_LABELS[incident.category]}模板</View>
           </View>
           <Text className={styles.categoryNote}>
-            已根据「{CATEGORY_LABELS[incident.category]}」类型预置模板，并自动带出协同页填写的事实和口径
+            已根据「{CATEGORY_LABELS[incident.category]}」+「{URGENCY_LABELS[incident.urgency]}」+ 热度 {incident.heat.toLocaleString()} 推荐观察节奏：{rhythm.label}
           </Text>
           <View className={styles.field}>
             <View className={styles.fieldLabel}>
@@ -200,7 +245,7 @@ const SummaryPage: React.FC = () => {
           </View>
           <View className={styles.actionsHeader}>
             <Text className={styles.fieldHint}>
-              已预置 {tplConfig.suggestedActions.length} 条场景化建议，可自由增删
+              已预置 {tplConfig.suggestedActions.length} 条场景化建议 + {rhythm.extraActions.length} 条节奏建议，可自由增删
             </Text>
             <Button className={styles.addActionBtn} onClick={handleAddAction}>
               + 新增
@@ -236,7 +281,7 @@ const SummaryPage: React.FC = () => {
             </View>
           </View>
           <Text className={styles.categoryNote}>
-            「{CATEGORY_LABELS[incident.category]}」类默认建议 {tplConfig.defaultNextCheckMinutes} 分钟后观察
+            自适应推荐 {rhythm.checkMinutes} 分钟后观察（{rhythm.label}）
           </Text>
           <View className={styles.field}>
             <View className={styles.fieldLabel}>
@@ -304,24 +349,27 @@ const SummaryPage: React.FC = () => {
                 <Text className={styles.historyIncident}>{tpl.incidentTitle}</Text>
                 <Text className={styles.historyTime}>{formatTime(tpl.generatedAt)}</Text>
               </View>
-              <Text className={styles.historyPreview}>{tpl.progressText}</Text>
+              <Text className={styles.historyPreview}>{tpl.progress}</Text>
               <View className={styles.historyMeta}>
                 <View className={styles.historyMetaLeft}>
-                  <View className={styles.historyTag}>{CATEGORY_LABELS[tpl.category]}</View>
+                  <View className={styles.historyTag}>{CATEGORY_LABELS[tpl.incidentCategory]}</View>
                   <View className={styles.historyTag}>{tpl.suggestedActions.length} 项动作</View>
                   <View className={styles.historyTag}>by {tpl.generatedBy}</View>
+                  {tpl.snapshotHeat > 0 && (
+                    <View className={styles.historyTag}>热度 {tpl.snapshotHeat.toLocaleString()}</View>
+                  )}
                 </View>
-                <Button className={styles.reuseBtn} onClick={() => handleReuse(tpl)}>
-                  复用
-                </Button>
+                <View style={{ display: 'flex', gap: '12rpx' }}>
+                  <Button className={styles.reuseBtn} onClick={() => setDetailTpl(tpl)}>
+                    详情
+                  </Button>
+                  <Button className={styles.reuseBtn} onClick={() => handleReuse(tpl)}>
+                    复用
+                  </Button>
+                </View>
               </View>
             </View>
           ))
-        )}
-        {historyForCurrent.length > 0 && historyForCurrent.length !== historyAll.length && (
-          <Text style={{ fontSize: '22rpx', color: '#86909C', padding: '16rpx', textAlign: 'center' }}>
-            当前事项已生成 {historyForCurrent.length} 份同步
-          </Text>
         )}
       </View>
 
@@ -353,9 +401,9 @@ const SummaryPage: React.FC = () => {
               {incidents.map((inc) => (
                 <View
                   key={inc.id}
-                  className={classnames(styles.modalItem, inc.id === selectedId && styles.active)}
+                  className={classnames(styles.modalItem, inc.id === activeId && styles.active)}
                   onClick={() => {
-                    setSelectedId(inc.id);
+                    setCurrentIncidentId(inc.id);
                     setPickerVisible(false);
                     setTimeout(() => {
                       const fresh = useSentimentStore.getState().incidents.find((i) => i.id === inc.id);
@@ -369,6 +417,103 @@ const SummaryPage: React.FC = () => {
                   </View>
                 </View>
               ))}
+            </ScrollView>
+          </View>
+        </View>
+      )}
+
+      {detailTpl && (
+        <View className={styles.modalMask} onClick={() => setDetailTpl(null)}>
+          <View className={styles.modalSheet} onClick={(e) => e.stopPropagation && e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>同步记录详情</Text>
+              <Text className={styles.modalClose} onClick={() => setDetailTpl(null)}>×</Text>
+            </View>
+            <ScrollView scrollY className={styles.modalList} enhanced showScrollbar={false}>
+              <View style={{ padding: '24rpx 32rpx' }}>
+                <Text style={{ fontSize: '30rpx', fontWeight: 600, color: '#1D2129', marginBottom: '16rpx', display: 'block' }}>
+                  {detailTpl.incidentTitle}
+                </Text>
+
+                <View style={{ display: 'flex', flexWrap: 'wrap', gap: '8rpx', marginBottom: '20rpx' }}>
+                  <View className={styles.historyTag}>{CATEGORY_LABELS[detailTpl.incidentCategory]}</View>
+                  <View className={styles.historyTag}>热度 {detailTpl.snapshotHeat.toLocaleString()}</View>
+                  {detailTpl.snapshotJudgeTag && (
+                    <View className={styles.historyTag}>初判：{JUDGE_LABELS[detailTpl.snapshotJudgeTag]}</View>
+                  )}
+                  <View className={styles.historyTag}>{formatTime(detailTpl.generatedAt)}</View>
+                </View>
+
+                {detailTpl.snapshotJudgeNote && (
+                  <View style={{ marginBottom: '20rpx' }}>
+                    <Text style={{ fontSize: '24rpx', color: '#86909C', display: 'block', marginBottom: '4rpx' }}>初判说明：</Text>
+                    <Text style={{ fontSize: '26rpx', color: '#4E5969', lineHeight: 1.6 }}>{detailTpl.snapshotJudgeNote}</Text>
+                  </View>
+                )}
+
+                <View style={{ marginBottom: '20rpx' }}>
+                  <Text style={{ fontSize: '24rpx', color: '#86909C', display: 'block', marginBottom: '8rpx' }}>部门反馈状态：</Text>
+                  <View style={{ display: 'flex', flexWrap: 'wrap', gap: '8rpx' }}>
+                    {renderDeptStatusTags(detailTpl.snapshotDeptStatus)}
+                  </View>
+                </View>
+
+                <View style={{ marginBottom: '20rpx' }}>
+                  <Text style={{ fontSize: '24rpx', color: '#86909C', display: 'block', marginBottom: '4rpx' }}>📌 事项进展：</Text>
+                  <Text style={{ fontSize: '26rpx', color: '#4E5969', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{detailTpl.progress}</Text>
+                </View>
+
+                <View style={{ marginBottom: '20rpx' }}>
+                  <Text style={{ fontSize: '24rpx', color: '#86909C', display: 'block', marginBottom: '4rpx' }}>🎯 建议动作：</Text>
+                  {detailTpl.suggestedActions.map((a, i) => (
+                    <Text key={i} style={{ fontSize: '26rpx', color: '#4E5969', lineHeight: 1.6, display: 'block' }}>
+                      {i + 1}. {a}
+                    </Text>
+                  ))}
+                </View>
+
+                <Text style={{ fontSize: '24rpx', color: '#86909C', display: 'block', marginBottom: '4rpx' }}>
+                  ⏰ 下次观察：{detailTpl.nextCheckTime}
+                </Text>
+
+                {detailTpl.snapshotFactStatement && (
+                  <View style={{ marginTop: '20rpx', padding: '16rpx', background: '#F7F8FA', borderRadius: '12rpx' }}>
+                    <Text style={{ fontSize: '24rpx', color: '#86909C', display: 'block', marginBottom: '4rpx' }}>引用的事实说明：</Text>
+                    <Text style={{ fontSize: '24rpx', color: '#4E5969', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{detailTpl.snapshotFactStatement}</Text>
+                  </View>
+                )}
+
+                {detailTpl.snapshotPublicStatement && (
+                  <View style={{ marginTop: '12rpx', padding: '16rpx', background: '#F7F8FA', borderRadius: '12rpx' }}>
+                    <Text style={{ fontSize: '24rpx', color: '#86909C', display: 'block', marginBottom: '4rpx' }}>引用的可公开口径：</Text>
+                    <Text style={{ fontSize: '24rpx', color: '#4E5969', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{detailTpl.snapshotPublicStatement}</Text>
+                  </View>
+                )}
+
+                {detailTpl.snapshotNoResponseBoundary && (
+                  <View style={{ marginTop: '12rpx', padding: '16rpx', background: '#FFF7F0', borderRadius: '12rpx' }}>
+                    <Text style={{ fontSize: '24rpx', color: '#86909C', display: 'block', marginBottom: '4rpx' }}>回应边界：</Text>
+                    <Text style={{ fontSize: '24rpx', color: '#4E5969', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{detailTpl.snapshotNoResponseBoundary}</Text>
+                  </View>
+                )}
+
+                <View style={{ display: 'flex', gap: '16rpx', marginTop: '32rpx' }}>
+                  <Button
+                    className={styles.btnGhost}
+                    style={{ flex: 1 }}
+                    onClick={() => setDetailTpl(null)}
+                  >
+                    关闭
+                  </Button>
+                  <Button
+                    className={styles.btnPrimary}
+                    style={{ flex: 2 }}
+                    onClick={() => handleReuse(detailTpl)}
+                  >
+                    复用此模板
+                  </Button>
+                </View>
+              </View>
             </ScrollView>
           </View>
         </View>

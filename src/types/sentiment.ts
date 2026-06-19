@@ -6,13 +6,14 @@ export type JudgeTag = 'pending' | 'exaggerate' | 'oldnews' | 'malicious';
 
 export type AssigneeDept = 'legal' | 'business' | 'secretary';
 
-export type DeptFeedbackStatus = 'pending' | 'in_progress' | 'submitted';
+export type DeptFeedbackStatus = 'pending' | 'in_progress' | 'submitted' | 'rejected';
 
 export type TimelineEventType =
   | 'first_report'
   | 'judge'
   | 'assign'
   | 'dept_feedback'
+  | 'dept_reject'
   | 'generate_sync'
   | 'status_change'
   | 'note';
@@ -46,6 +47,10 @@ export interface DeptFeedback {
   publicStatement: string;
   noResponseBoundary: string;
   assigneeName: string;
+  rejectedAt: string | null;
+  rejectedBy: string | null;
+  rejectReason: string;
+  resubmitCount: number;
 }
 
 export interface TimelineEvent {
@@ -92,6 +97,14 @@ export interface SyncTemplate {
   nextCheckTime: string;
   content: string;
   generatedBy: string;
+  snapshotHeat: number;
+  snapshotJudgeTag: JudgeTag | null;
+  snapshotJudgeNote: string;
+  snapshotDeptStatus: Record<AssigneeDept, DeptFeedbackStatus | null>;
+  snapshotFactStatement: string;
+  snapshotPublicStatement: string;
+  snapshotNoResponseBoundary: string;
+  adaptiveCheckMinutes: number;
 }
 
 export interface CategoryTemplateConfig {
@@ -129,7 +142,8 @@ export const DEPT_LABELS: Record<AssigneeDept, string> = {
 export const DEPT_FEEDBACK_STATUS_LABELS: Record<DeptFeedbackStatus, string> = {
   pending: '待反馈',
   in_progress: '处理中',
-  submitted: '已反馈'
+  submitted: '已反馈',
+  rejected: '需补充'
 };
 
 export const TIMELINE_EVENT_LABELS: Record<TimelineEventType, string> = {
@@ -137,6 +151,7 @@ export const TIMELINE_EVENT_LABELS: Record<TimelineEventType, string> = {
   judge: '初判打标',
   assign: '派单协同',
   dept_feedback: '部门反馈',
+  dept_reject: '退回补充',
   generate_sync: '生成同步',
   status_change: '状态变更',
   note: '补充记录'
@@ -177,3 +192,79 @@ export const CATEGORY_TEMPLATES: Record<IncidentCategory, CategoryTemplateConfig
       '客户投诉事项：当事人【】，核心诉求【】。已/未取得联系，和解进展【】。转发媒体数量【】家，外部舆论趋势【】。'
   }
 };
+
+export interface AdaptiveRhythm {
+  checkMinutes: number;
+  label: string;
+  extraActions: string[];
+}
+
+export function getAdaptiveRhythm(
+  category: IncidentCategory,
+  urgency: UrgencyLevel,
+  heat: number
+): AdaptiveRhythm {
+  const isHighHeat = heat >= 5000;
+  const isMidHeat = heat >= 2000;
+  if (category === 'media') {
+    if (urgency === 'critical' || isHighHeat) {
+      return {
+        checkMinutes: 30,
+        label: '特急/高热度：每30分钟观察',
+        extraActions: ['每30分钟更新热搜排名和转发量', '准备交易所公告口径，法务加急审定']
+      };
+    }
+    if (urgency === 'high' || isMidHeat) {
+      return {
+        checkMinutes: 60,
+        label: '紧急/中热度：每60分钟观察',
+        extraActions: ['每小时记录一次百度/微博热搜变化']
+      };
+    }
+    return {
+      checkMinutes: 120,
+      label: '常规：每2小时观察',
+      extraActions: ['每2小时更新一次传播数据']
+    };
+  }
+  if (category === 'investor') {
+    if (urgency === 'critical' || isHighHeat) {
+      return {
+        checkMinutes: 60,
+        label: '特急/高热度：每60分钟观察',
+        extraActions: ['实时监控融券异动', '每60分钟更新互动易口径']
+      };
+    }
+    if (urgency === 'high' || isMidHeat) {
+      return {
+        checkMinutes: 120,
+        label: '紧急/中热度：每2小时观察',
+        extraActions: ['每2小时统计股吧/雪球跟帖量变化']
+      };
+    }
+    return {
+      checkMinutes: 240,
+      label: '常规：每4小时观察',
+      extraActions: ['每日收盘后汇总一次']
+    };
+  }
+  if (urgency === 'critical' || isHighHeat) {
+    return {
+      checkMinutes: 90,
+      label: '特急/高热度：每90分钟观察',
+      extraActions: ['每90分钟更新投诉人沟通进展', '监测维权号转发节奏']
+    };
+  }
+  if (urgency === 'high' || isMidHeat) {
+    return {
+      checkMinutes: 180,
+      label: '紧急/中热度：每3小时观察',
+      extraActions: ['每3小时检查一次外部舆论走势']
+    };
+  }
+  return {
+    checkMinutes: 360,
+    label: '常规：每6小时观察',
+    extraActions: ['每日上午和下午各汇总一次']
+  };
+}

@@ -23,21 +23,26 @@ const DEPT_ORDER: AssigneeDept[] = ['legal', 'business', 'secretary'];
 
 const CollaboratePage: React.FC = () => {
   const incidents = useSentimentStore((s) => s.incidents);
+  const currentIncidentId = useSentimentStore((s) => s.currentIncidentId);
   const assignDept = useSentimentStore((s) => s.assignDept);
   const submitDeptFeedback = useSentimentStore((s) => s.submitDeptFeedback);
-  const getIncident = useSentimentStore((s) => s.getIncident);
+  const rejectDeptFeedback = useSentimentStore((s) => s.rejectDeptFeedback);
+  const setCurrentIncidentId = useSentimentStore((s) => s.setCurrentIncidentId);
 
-  const [selectedId, setSelectedId] = useState<string>(incidents[0]?.id || '');
   const [pickerVisible, setPickerVisible] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, LocalDeptDraft>>({});
+  const [rejectDept, setRejectDept] = useState<AssigneeDept | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
+  const activeId = currentIncidentId || incidents[0]?.id || '';
 
   const incident: Incident | undefined = useMemo(
-    () => incidents.find((i) => i.id === selectedId),
-    [incidents, selectedId]
+    () => incidents.find((i) => i.id === activeId),
+    [incidents, activeId]
   );
 
   useDidShow(() => {
-    const fresh = incidents.find((i) => i.id === selectedId);
+    const fresh = incidents.find((i) => i.id === activeId);
     if (fresh) {
       const next: Record<string, LocalDeptDraft> = {};
       DEPT_ORDER.forEach((d) => {
@@ -52,10 +57,8 @@ const CollaboratePage: React.FC = () => {
       });
       setDrafts(next);
     }
-    console.log('[Collaborate] 页面展示，当前事项:', selectedId);
+    console.log('[Collaborate] 页面展示，当前事项:', activeId);
   });
-
-  void getIncident;
 
   if (!incident) {
     return (
@@ -119,6 +122,18 @@ const CollaboratePage: React.FC = () => {
     Taro.showToast({ title: `${DEPT_LABELS[dept]}反馈已保存`, icon: 'success' });
   };
 
+  const handleRejectConfirm = () => {
+    if (!rejectDept) return;
+    if (!rejectReason.trim()) {
+      Taro.showToast({ title: '请填写退回原因', icon: 'none' });
+      return;
+    }
+    rejectDeptFeedback(incident.id, rejectDept, rejectReason.trim());
+    setRejectDept(null);
+    setRejectReason('');
+    Taro.showToast({ title: `已退回${DEPT_LABELS[rejectDept]}反馈`, icon: 'success' });
+  };
+
   const deptIconMap: Record<AssigneeDept, string> = {
     legal: '⚖',
     business: '📊',
@@ -134,6 +149,7 @@ const CollaboratePage: React.FC = () => {
     submitted: '已反馈',
     in_progress: '处理中',
     pending: '待处理',
+    rejected: '需补充',
     unassigned: '未派单'
   };
 
@@ -141,6 +157,7 @@ const CollaboratePage: React.FC = () => {
     submitted: styles.statusSubmitted,
     in_progress: styles.statusInProgress,
     pending: styles.statusPending,
+    rejected: styles.statusRejected,
     unassigned: styles.statusUnassigned
   };
 
@@ -148,6 +165,7 @@ const CollaboratePage: React.FC = () => {
     submitted: styles.cardSubmitted,
     in_progress: styles.cardInProgress,
     pending: styles.cardPending,
+    rejected: styles.cardRejected,
     unassigned: styles.cardUnassigned
   };
 
@@ -155,6 +173,7 @@ const CollaboratePage: React.FC = () => {
     submitted: styles.submitted,
     in_progress: styles.inProgress,
     pending: styles.pending,
+    rejected: styles.rejected,
     unassigned: styles.unassigned
   };
 
@@ -216,7 +235,9 @@ const CollaboratePage: React.FC = () => {
           const fb = incident.feedbacks[dept];
           const draft = drafts[dept] || { factStatement: '', publicStatement: '', noResponseBoundary: '' };
           const isSubmitted = s === 'submitted';
+          const isRejected = s === 'rejected';
           const isAssigned = s !== 'unassigned';
+          const canEdit = isRejected || s === 'in_progress' || s === 'pending';
 
           return (
             <View
@@ -237,9 +258,22 @@ const CollaboratePage: React.FC = () => {
                 </View>
                 <View className={classnames(styles.deptStatusBadge, statusStyleMap[s])}>
                   {s === 'submitted' && '✓'}
+                  {s === 'rejected' && '!'}
                   <Text>{statusTextMap[s]}</Text>
                 </View>
               </View>
+
+              {isRejected && fb?.rejectReason && (
+                <View className={styles.rejectInfo}>
+                  <Text className={styles.rejectLabel}>退回原因：</Text>
+                  <Text className={styles.rejectText}>{fb.rejectReason}</Text>
+                  {fb.rejectedAt && (
+                    <Text className={styles.rejectTime}>
+                      {formatTime(fb.rejectedAt)} 退回
+                    </Text>
+                  )}
+                </View>
+              )}
 
               {!isAssigned ? (
                 <View className={styles.assignRow}>
@@ -265,10 +299,10 @@ const CollaboratePage: React.FC = () => {
                       <Textarea
                         value={draft.factStatement}
                         onInput={(e) => handleDraftChange(dept, 'factStatement', e.detail.value)}
-                        className={classnames(styles.textarea, isSubmitted && styles.readonly)}
+                        className={classnames(styles.textarea, !canEdit && styles.readonly)}
                         placeholder={`请${DEPT_LABELS[dept]}填写经过确认的客观事实...`}
                         maxlength={500}
-                        disabled={isSubmitted}
+                        disabled={!canEdit}
                         autoHeight
                       />
                     </View>
@@ -282,10 +316,10 @@ const CollaboratePage: React.FC = () => {
                       <Textarea
                         value={draft.publicStatement}
                         onInput={(e) => handleDraftChange(dept, 'publicStatement', e.detail.value)}
-                        className={classnames(styles.textarea, isSubmitted && styles.readonly)}
+                        className={classnames(styles.textarea, !canEdit && styles.readonly)}
                         placeholder="请填写可对外公开的统一回复口径..."
                         maxlength={500}
-                        disabled={isSubmitted}
+                        disabled={!canEdit}
                         autoHeight
                       />
                     </View>
@@ -299,10 +333,10 @@ const CollaboratePage: React.FC = () => {
                       <Textarea
                         value={draft.noResponseBoundary}
                         onInput={(e) => handleDraftChange(dept, 'noResponseBoundary', e.detail.value)}
-                        className={classnames(styles.textarea, isSubmitted && styles.readonly)}
+                        className={classnames(styles.textarea, !canEdit && styles.readonly)}
                         placeholder="请说明不能对外回应的敏感信息和边界..."
                         maxlength={500}
-                        disabled={isSubmitted}
+                        disabled={!canEdit}
                         autoHeight
                       />
                     </View>
@@ -316,13 +350,26 @@ const CollaboratePage: React.FC = () => {
                         ? `派单时间：${formatTime(fb.assignedAt)}`
                         : ''}
                     </Text>
-                    <Button
-                      className={isSubmitted ? styles.saveBtnOutline : styles.saveBtn}
-                      onClick={() => handleSubmit(dept)}
-                      disabled={isSubmitted}
-                    >
-                      {isSubmitted ? '✓ 已提交' : '保存反馈'}
-                    </Button>
+                    <View className={styles.footerBtns}>
+                      {isSubmitted && (
+                        <Button
+                          className={styles.rejectBtn}
+                          onClick={() => {
+                            setRejectDept(dept);
+                            setRejectReason('');
+                          }}
+                        >
+                          退回补充
+                        </Button>
+                      )}
+                      <Button
+                        className={isSubmitted ? styles.saveBtnOutline : styles.saveBtn}
+                        onClick={() => handleSubmit(dept)}
+                        disabled={isSubmitted}
+                      >
+                        {isRejected ? '重新提交' : isSubmitted ? '✓ 已提交' : '保存反馈'}
+                      </Button>
+                    </View>
                   </View>
                 </>
               )}
@@ -340,7 +387,10 @@ const CollaboratePage: React.FC = () => {
         </Button>
         <Button
           className={styles.btnPrimary}
-          onClick={() => Taro.switchTab({ url: '/pages/summary/index' })}
+          onClick={() => {
+            setCurrentIncidentId(incident.id);
+            Taro.switchTab({ url: '/pages/summary/index' });
+          }}
         >
           前往生成同步
         </Button>
@@ -359,9 +409,9 @@ const CollaboratePage: React.FC = () => {
               {incidents.map((inc) => (
                 <View
                   key={inc.id}
-                  className={classnames(styles.modalItem, inc.id === selectedId && styles.active)}
+                  className={classnames(styles.modalItem, inc.id === activeId && styles.active)}
                   onClick={() => {
-                    setSelectedId(inc.id);
+                    setCurrentIncidentId(inc.id);
                     setPickerVisible(false);
                   }}
                 >
@@ -372,6 +422,47 @@ const CollaboratePage: React.FC = () => {
                 </View>
               ))}
             </ScrollView>
+          </View>
+        </View>
+      )}
+
+      {rejectDept && (
+        <View className={styles.modalMask} onClick={() => setRejectDept(null)}>
+          <View className={styles.modalSheet} onClick={(e) => e.stopPropagation && e.stopPropagation()}>
+            <View className={styles.modalHeader}>
+              <Text className={styles.modalTitle}>退回{DEPT_LABELS[rejectDept]}反馈</Text>
+              <Text className={styles.modalClose} onClick={() => setRejectDept(null)}>×</Text>
+            </View>
+            <View style={{ padding: '24rpx 32rpx' }}>
+              <Text style={{ fontSize: '28rpx', color: '#4E5969', marginBottom: '16rpx', display: 'block' }}>
+                请说明退回原因，{DEPT_LABELS[rejectDept]}将收到通知后补充
+              </Text>
+              <Textarea
+                value={rejectReason}
+                onInput={(e) => setRejectReason(e.detail.value)}
+                className={styles.textarea}
+                placeholder="例如：事实说明缺少关键时间节点，口径需要更严谨..."
+                maxlength={200}
+                autoHeight
+                style={{ minHeight: '200rpx' }}
+              />
+              <View style={{ display: 'flex', gap: '16rpx', marginTop: '24rpx' }}>
+                <Button
+                  className={styles.btnGhost}
+                  style={{ flex: 1 }}
+                  onClick={() => setRejectDept(null)}
+                >
+                  取消
+                </Button>
+                <Button
+                  className={styles.btnPrimary}
+                  style={{ flex: 2 }}
+                  onClick={handleRejectConfirm}
+                >
+                  确认退回
+                </Button>
+              </View>
+            </View>
           </View>
         </View>
       )}
