@@ -22,12 +22,43 @@
 .medium { border-left-color: $color-alert-yellow; }
 .low { border-left-color: $color-alert-green; }
 
+.cardCurrent {
+  border: 2px solid $color-primary;
+  border-left-width: 6rpx;
+  box-shadow: 0 4px 20px rgba(0, 122, 255, 0.12);
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.04) 0%, $color-bg-card 30%);
+}
+
 .header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: $spacing-sm;
   gap: $spacing-sm;
+}
+
+.headerLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  flex-shrink: 0;
+}
+
+.currentBadge {
+  padding: 4rpx 12rpx;
+  background: $color-primary;
+  border-radius: $radius-sm;
+}
+
+.currentBadgeText {
+  font-size: 20rpx;
+  font-weight: 600;
+  color: $color-text-white;
 }
 
 .title {

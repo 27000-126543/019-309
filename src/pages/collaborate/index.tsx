@@ -275,6 +275,29 @@ const CollaboratePage: React.FC = () => {
                 </View>
               )}
 
+              {isRejected && fb?.previousContent && (
+                <View className={styles.prevContent}>
+                  <View className={styles.prevContentHeader}>
+                    <Text className={styles.prevContentIcon}>📜</Text>
+                    <Text className={styles.prevContentTitle}>上次提交内容（请参考后补充）</Text>
+                  </View>
+                  <View className={styles.prevContentBody}>
+                    <View className={styles.prevField}>
+                      <Text className={styles.prevFieldLabel}>事实说明：</Text>
+                      <Text className={styles.prevFieldValue}>{fb.previousContent.factStatement || '（空）'}</Text>
+                    </View>
+                    <View className={styles.prevField}>
+                      <Text className={styles.prevFieldLabel}>可公开口径：</Text>
+                      <Text className={styles.prevFieldValue}>{fb.previousContent.publicStatement || '（空）'}</Text>
+                    </View>
+                    <View className={styles.prevField}>
+                      <Text className={styles.prevFieldLabel}>不能回应的边界：</Text>
+                      <Text className={styles.prevFieldValue}>{fb.previousContent.noResponseBoundary || '（空）'}</Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
               {!isAssigned ? (
                 <View className={styles.assignRow}>
                   <Text className={styles.assignText}>

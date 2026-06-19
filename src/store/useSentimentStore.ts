@@ -69,6 +69,7 @@ interface SentimentStore {
   ) => void;
   rejectDeptFeedback: (incidentId: string, dept: AssigneeDept, reason: string) => void;
 
+  getLatestValidFeedback: (incident: Incident, dept: AssigneeDept) => DeptFeedback | null;
   getMergedFeedback: (incident: Incident) => {
     factStatement: string;
     publicStatement: string;
@@ -88,7 +89,10 @@ interface SentimentStore {
     adaptiveCheckMinutes: number;
   };
 
-  addSyncTemplate: (tpl: Omit<SyncTemplate, 'id' | 'generatedAt' | 'generatedBy'>) => void;
+  addSyncTemplate: (tpl: Omit<SyncTemplate, 'id' | 'generatedAt' | 'generatedBy' | 'version' | 'previousId' | 'versionNote'> & { versionNote?: string }) => void;
+
+  getIncidentNextCheckTime: (incident: Incident) => string | null;
+  getSortedByUrgency: () => Incident[];
 
   updateIncident: (id: string, patch: Partial<Incident>) => void;
 }
@@ -183,7 +187,8 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
               rejectedAt: null,
               rejectedBy: null,
               rejectReason: '',
-              resubmitCount: 0
+              resubmitCount: 0,
+              previousContent: null
             };
             newEvents.push(
               createTimelineEvent(
@@ -235,7 +240,7 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
         if (i.id !== incidentId) return i;
         const fb = i.feedbacks[dept];
         if (!fb) return i;
-        const isResubmit = fb.resubmitCount > 0;
+        const isResubmit = fb.status === 'rejected';
         return {
           ...i,
           feedbacks: {
@@ -286,7 +291,12 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
               rejectedAt: now,
               rejectedBy: s.currentUser,
               rejectReason: reason,
-              resubmitCount: fb.resubmitCount + 1
+              resubmitCount: fb.resubmitCount + 1,
+              previousContent: {
+                factStatement: fb.factStatement,
+                publicStatement: fb.publicStatement,
+                noResponseBoundary: fb.noResponseBoundary
+              }
             }
           },
           timeline: [
@@ -306,8 +316,15 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
     console.log('[Store] rejectDeptFeedback:', { incidentId, dept, reason });
   },
 
+  getLatestValidFeedback: (incident, dept) => {
+    const fb = incident.feedbacks[dept];
+    return fb && fb.status === 'submitted' ? fb : null;
+  },
+
   getMergedFeedback: (incident) => {
-    const fbs = Object.values(incident.feedbacks).filter(Boolean) as DeptFeedback[];
+    const fbs = (Object.keys(incident.feedbacks) as AssigneeDept[])
+      .map((d) => incident.feedbacks[d])
+      .filter((fb): fb is DeptFeedback => !!fb && fb.status === 'submitted');
     const merge = (key: 'factStatement' | 'publicStatement' | 'noResponseBoundary') =>
       fbs
         .filter((f) => f[key]?.trim())
@@ -345,9 +362,37 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
     };
   },
 
+  getIncidentNextCheckTime: (incident) => {
+    const { syncTemplates } = get();
+    const myTemplates = syncTemplates.filter((t) => t.incidentId === incident.id);
+    if (myTemplates.length === 0) return null;
+    return myTemplates[0].nextCheckTime;
+  },
+
+  getSortedByUrgency: () => {
+    const urgencyOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 };
+    return [...get().incidents].sort((a, b) => {
+      const ua = urgencyOrder[a.urgency];
+      const ub = urgencyOrder[b.urgency];
+      if (ua !== ub) return ua - ub;
+      return b.heat - a.heat;
+    });
+  },
+
   addSyncTemplate: (tpl) => {
     const now = new Date().toISOString();
+    const { syncTemplates } = get();
+    const myTemplates = syncTemplates
+      .filter((t) => t.incidentId === tpl.incidentId)
+      .sort((a, b) => b.version - a.version);
+    const lastVersion = myTemplates[0];
+    const version = lastVersion ? lastVersion.version + 1 : 1;
+    const previousId = lastVersion ? lastVersion.id : null;
+
     const newTpl: SyncTemplate = {
+      version,
+      previousId,
+      versionNote: tpl.versionNote || '',
       ...tpl,
       id: uid('SYNC'),
       generatedAt: now,
@@ -364,7 +409,7 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
                 createTimelineEvent(
                   'generate_sync',
                   CURRENT_USER,
-                  '生成对内同步模板',
+                  `生成同步模板（v${version}）`,
                   `共 ${tpl.suggestedActions.length} 项建议动作，下次观察：${tpl.nextCheckTime}`
                 )
               ],
@@ -373,7 +418,7 @@ export const useSentimentStore = create<SentimentStore>((set, get) => ({
           : i
       )
     }));
-    console.log('[Store] addSyncTemplate:', newTpl.id);
+    console.log('[Store] addSyncTemplate:', newTpl.id, 'v' + version);
   },
 
   updateIncident: (id, patch) => {

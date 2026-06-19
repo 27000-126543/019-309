@@ -463,6 +463,58 @@
   margin: $spacing-md $page-padding;
 }
 
+.prevContent {
+  margin: $spacing-md 0;
+  padding: $spacing-md;
+  background: rgba(255, 149, 0, 0.06);
+  border: 1px dashed rgba(255, 149, 0, 0.3);
+  border-radius: $radius-md;
+}
+
+.prevContentHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-sm;
+}
+
+.prevContentIcon {
+  font-size: 28rpx;
+}
+
+.prevContentTitle {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: #ff9500;
+}
+
+.prevContentBody {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+}
+
+.prevField {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.prevFieldLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  font-weight: 500;
+}
+
+.prevFieldValue {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: $line-height-base;
+  background: rgba(255, 255, 255, 0.6);
+  padding: $spacing-sm;
+  border-radius: $radius-sm;
+}
+
 .modalMask {
   position: fixed;
   inset: 0;

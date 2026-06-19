@@ -51,6 +51,11 @@ export interface DeptFeedback {
   rejectedBy: string | null;
   rejectReason: string;
   resubmitCount: number;
+  previousContent: {
+    factStatement: string;
+    publicStatement: string;
+    noResponseBoundary: string;
+  } | null;
 }
 
 export interface TimelineEvent {
@@ -105,6 +110,9 @@ export interface SyncTemplate {
   snapshotPublicStatement: string;
   snapshotNoResponseBoundary: string;
   adaptiveCheckMinutes: number;
+  version: number;
+  previousId: string | null;
+  versionNote: string;
 }
 
 export interface CategoryTemplateConfig {

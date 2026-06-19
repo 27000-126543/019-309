@@ -13,6 +13,7 @@ import {
 
 interface IncidentCardProps {
   incident: Incident;
+  isCurrent?: boolean;
   onClick?: () => void;
 }
 
@@ -37,7 +38,7 @@ const STATUS_LABELS: Record<string, string> = {
   closed: '已归档'
 };
 
-const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onClick }) => {
+const IncidentCard: React.FC<IncidentCardProps> = ({ incident, isCurrent = false, onClick }) => {
   const urgencyMap: Record<string, string> = {
     critical: styles.urgencyCritical,
     high: styles.urgencyHigh,
@@ -77,6 +78,7 @@ const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onClick }) => {
     <View
       className={classnames(
         styles.card,
+        isCurrent && styles.cardCurrent,
         incident.urgency === 'critical' && styles.critical,
         incident.urgency === 'high' && styles.high,
         incident.urgency === 'medium' && styles.medium,
@@ -85,9 +87,18 @@ const IncidentCard: React.FC<IncidentCardProps> = ({ incident, onClick }) => {
       onClick={onClick}
     >
       <View className={styles.header}>
-        <Text className={styles.title}>{incident.title}</Text>
-        <View className={classnames(styles.urgencyBadge, urgencyMap[incident.urgency])}>
-          {URGENCY_LABELS[incident.urgency]}
+        <View className={styles.headerLeft}>
+          <Text className={styles.title}>{incident.title}</Text>
+        </View>
+        <View className={styles.headerRight}>
+          {isCurrent && (
+            <View className={styles.currentBadge}>
+              <Text className={styles.currentBadgeText}>处理中</Text>
+            </View>
+          )}
+          <View className={classnames(styles.urgencyBadge, urgencyMap[incident.urgency])}>
+            {URGENCY_LABELS[incident.urgency]}
+          </View>
         </View>
       </View>
 

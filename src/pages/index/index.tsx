@@ -4,15 +4,26 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import IncidentCard from '@/components/IncidentCard';
+import ShiftHandover from '@/components/ShiftHandover';
 import { useSentimentStore } from '@/store/useSentimentStore';
-import { Incident, IncidentCategory, CATEGORY_LABELS } from '@/types/sentiment';
+import { Incident, IncidentCategory, CATEGORY_LABELS, URGENCY_LABELS } from '@/types/sentiment';
 
 type FilterType = 'all' | IncidentCategory;
+type ViewMode = 'list' | 'handover';
+
+const URGENCY_COLORS: Record<string, string> = {
+  critical: '#FF3B30',
+  high: '#FF9500',
+  medium: '#FFCC00',
+  low: '#8E8E93'
+};
 
 const IndexPage: React.FC = () => {
   const incidents = useSentimentStore((s) => s.incidents);
+  const currentIncidentId = useSentimentStore((s) => s.currentIncidentId);
   const setCurrentIncidentId = useSentimentStore((s) => s.setCurrentIncidentId);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -62,6 +73,17 @@ const IndexPage: React.FC = () => {
     });
   };
 
+  const currentIncident = useMemo(
+    () => incidents.find((i) => i.id === currentIncidentId) || null,
+    [incidents, currentIncidentId]
+  );
+
+  const handleCurrentClick = () => {
+    if (currentIncident) {
+      Taro.navigateTo({ url: `/pages/detail/index?id=${currentIncident.id}` });
+    }
+  };
+
   const formatTime = (d: Date) => {
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
   };
@@ -76,6 +98,11 @@ const IndexPage: React.FC = () => {
     { key: 'media', label: CATEGORY_LABELS.media },
     { key: 'investor', label: CATEGORY_LABELS.investor },
     { key: 'complaint', label: CATEGORY_LABELS.complaint }
+  ];
+
+  const viewTabs: { key: ViewMode; label: string; icon: string }[] = [
+    { key: 'list', label: '事项列表', icon: '📋' },
+    { key: 'handover', label: '交接班', icon: '🔄' }
   ];
 
   return (
@@ -126,46 +153,86 @@ const IndexPage: React.FC = () => {
         </View>
       </View>
 
-      <View className={styles.tabsSection}>
-        <ScrollView scrollX className={styles.tabsRow} enhanced showScrollbar={false}>
-          {tabs.map((tab) => (
-            <Button
-              key={tab.key}
-              className={classnames(styles.tabItem, filter === tab.key && styles.tabItemActive)}
-              onClick={() => setFilter(tab.key)}
+      <View className={styles.viewTabs}>
+        {viewTabs.map((tab) => (
+          <Button
+            key={tab.key}
+            className={classnames(styles.viewTab, viewMode === tab.key && styles.viewTabActive)}
+            onClick={() => setViewMode(tab.key)}
+          >
+            <Text className={styles.viewTabIcon}>{tab.icon}</Text>
+            <Text className={styles.viewTabLabel}>{tab.label}</Text>
+          </Button>
+        ))}
+      </View>
+
+      {currentIncident && viewMode === 'list' && (
+        <View className={styles.currentBar} onClick={handleCurrentClick}>
+          <View className={styles.currentBarLeft}>
+            <View className={styles.currentBadge}>
+              <Text className={styles.currentBadgeText}>处理中</Text>
+            </View>
+            <Text
+              className={styles.currentUrgency}
+              style={{ color: URGENCY_COLORS[currentIncident.urgency] }}
             >
-              {tab.label}
-              <Text className={styles.tabBadge}>{categoryCounts[tab.key]}</Text>
-            </Button>
-          ))}
-        </ScrollView>
-      </View>
-
-      <View className={styles.sectionTitle}>
-        <Text className={styles.sectionLabel}>升温事项列表</Text>
-        <Text className={styles.sectionCount}>共 {filtered.length} 条，按紧急度排序</Text>
-      </View>
-
-      <View className={styles.listSection}>
-        {filtered.length > 0 ? (
-          filtered.map((incident) => (
-            <IncidentCard
-              key={incident.id}
-              incident={incident}
-              onClick={() => handleCardClick(incident)}
-            />
-          ))
-        ) : (
-          <View className={styles.emptyState}>
-            <Text className={styles.emptyIcon}>✓</Text>
-            <Text className={styles.emptyText}>
-              当前分类暂无升温事项
-              {'\n'}
-              继续保持监控
+              {URGENCY_LABELS[currentIncident.urgency]}
             </Text>
           </View>
-        )}
-      </View>
+          <Text className={styles.currentTitle} numberOfLines={1}>
+            {currentIncident.title}
+          </Text>
+          <View className={styles.currentArrow}>›</View>
+        </View>
+      )}
+
+      {viewMode === 'list' ? (
+        <>
+          <View className={styles.tabsSection}>
+            <ScrollView scrollX className={styles.tabsRow} enhanced showScrollbar={false}>
+              {tabs.map((tab) => (
+                <Button
+                  key={tab.key}
+                  className={classnames(styles.tabItem, filter === tab.key && styles.tabItemActive)}
+                  onClick={() => setFilter(tab.key)}
+                >
+                  {tab.label}
+                  <Text className={styles.tabBadge}>{categoryCounts[tab.key]}</Text>
+                </Button>
+              ))}
+            </ScrollView>
+          </View>
+
+          <View className={styles.sectionTitle}>
+            <Text className={styles.sectionLabel}>升温事项列表</Text>
+            <Text className={styles.sectionCount}>共 {filtered.length} 条，按紧急度排序</Text>
+          </View>
+
+          <View className={styles.listSection}>
+            {filtered.length > 0 ? (
+              filtered.map((incident) => (
+                <IncidentCard
+                  key={incident.id}
+                  incident={incident}
+                  isCurrent={incident.id === currentIncidentId}
+                  onClick={() => handleCardClick(incident)}
+                />
+              ))
+            ) : (
+              <View className={styles.emptyState}>
+                <Text className={styles.emptyIcon}>✓</Text>
+                <Text className={styles.emptyText}>
+                  当前分类暂无升温事项
+                  {'\n'}
+                  继续保持监控
+                </Text>
+              </View>
+            )}
+          </View>
+        </>
+      ) : (
+        <ShiftHandover />
+      )}
     </ScrollView>
   );
 };

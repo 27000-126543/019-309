@@ -1,0 +1,204 @@
+.wrap {
+  padding: 16px;
+  background: #fff;
+  border-radius: 12px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.titleIcon {
+  font-size: 20px;
+}
+
+.titleText {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+
+.shiftTime {
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+.summaryRow {
+  display: flex;
+  justify-content: space-around;
+  padding: 16px 0;
+  margin-bottom: 16px;
+  background: #f9f9fb;
+  border-radius: 8px;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.summaryValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1c1c1e;
+}
+
+.summaryLabel {
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+.tableHeader {
+  display: none;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #fff;
+  border: 1px solid #e5e5ea;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.rowCurrent {
+  border-color: #007aff;
+  border-width: 2px;
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.03), rgba(0, 122, 255, 0));
+  box-shadow: 0 2px 12px rgba(0, 122, 255, 0.08);
+}
+
+.tdPriority {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.priorityBadge {
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.priorityText {
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.currentBadge {
+  padding: 2px 8px;
+  background: #007aff;
+  border-radius: 8px;
+}
+
+.currentBadgeText {
+  font-size: 11px;
+  color: #fff;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.categoryTag {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #fff;
+}
+
+.categoryText {
+  font-size: 12px;
+  color: #8e8e93;
+}
+
+.heatText {
+  font-size: 12px;
+  color: #ff3b30;
+  font-weight: 600;
+}
+
+.incidentTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1c1c1e;
+  line-height: 1.5;
+}
+
+.tdDepts {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.deptTag {
+  padding: 3px 8px;
+  border: 1px solid;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.deptTagRejected {
+  background: rgba(255, 59, 48, 0.05);
+}
+
+.deptTagText {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.tdPending {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pendingText {
+  font-size: 12px;
+  color: #ff9500;
+}
+
+.pendingStatus {
+  color: #8e8e93;
+  font-size: 11px;
+}
+
+.doneText {
+  font-size: 12px;
+  color: #34c759;
+  font-weight: 600;
+}
+
+.emptyText {
+  font-size: 12px;
+  color: #c7c7cc;
+}
+
+.tdNext {
+  padding-top: 4px;
+  border-top: 1px dashed #e5e5ea;
+}
+
+.nextCheck {
+  font-size: 12px;
+  color: #007aff;
+  font-weight: 500;
+}

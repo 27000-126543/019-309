@@ -178,6 +178,29 @@ const SummaryPage: React.FC = () => {
 
   const historyAll = syncTemplates;
 
+  const groupedHistory = useMemo(() => {
+    const groups: Record<string, SyncTemplate[]> = {};
+    historyAll.forEach((tpl) => {
+      if (!groups[tpl.incidentId]) groups[tpl.incidentId] = [];
+      groups[tpl.incidentId].push(tpl);
+    });
+    Object.keys(groups).forEach((incidentId) => {
+      groups[incidentId].sort((a, b) => b.version - a.version);
+    });
+    return groups;
+  }, [historyAll]);
+
+  const groupedList = useMemo(() => {
+    return Object.entries(groupedHistory).map(([incidentId, tpls]) => {
+      const inc = incidents.find((i) => i.id === incidentId);
+      return {
+        incidentId,
+        incidentTitle: inc?.title || tpls[0].incidentTitle,
+        templates: tpls
+      };
+    });
+  }, [groupedHistory, incidents]);
+
   const renderDeptStatusTags = (deptStatus: Record<AssigneeDept, DeptFeedbackStatus | null>) => {
     return DEPT_ORDER.map((d) => {
       const s = deptStatus[d];
@@ -336,40 +359,78 @@ const SummaryPage: React.FC = () => {
       <View className={styles.historySection}>
         <View className={styles.historyHeader}>
           <View className={styles.historyTitle}>
-            <Text>📚 历史同步记录</Text>
+            <Text>📚 历史同步记录（按事项归档）</Text>
           </View>
-          <View className={styles.historyCount}>{historyAll.length} 条</View>
+          <View className={styles.historyCount}>{historyAll.length} 条 · {groupedList.length} 个事项</View>
         </View>
         {historyAll.length === 0 ? (
           <View className={styles.emptyTip}>暂无历史同步记录，保存后可在此复用</View>
         ) : (
-          historyAll.map((tpl) => (
-            <View key={tpl.id} className={styles.historyCard}>
-              <View className={styles.historyHead}>
-                <Text className={styles.historyIncident}>{tpl.incidentTitle}</Text>
-                <Text className={styles.historyTime}>{formatTime(tpl.generatedAt)}</Text>
-              </View>
-              <Text className={styles.historyPreview}>{tpl.progress}</Text>
-              <View className={styles.historyMeta}>
-                <View className={styles.historyMetaLeft}>
-                  <View className={styles.historyTag}>{CATEGORY_LABELS[tpl.incidentCategory]}</View>
-                  <View className={styles.historyTag}>{tpl.suggestedActions.length} 项动作</View>
-                  <View className={styles.historyTag}>by {tpl.generatedBy}</View>
-                  {tpl.snapshotHeat > 0 && (
-                    <View className={styles.historyTag}>热度 {tpl.snapshotHeat.toLocaleString()}</View>
-                  )}
+          <View className={styles.historyGroups}>
+            {groupedList.map((group) => (
+              <View key={group.incidentId} className={styles.historyGroup}>
+                <View className={styles.historyGroupHeader}>
+                  <Text className={styles.historyGroupTitle} numberOfLines={1}>
+                    {group.incidentTitle}
+                  </Text>
+                  <View className={styles.historyGroupBadge}>
+                    <Text className={styles.historyGroupBadgeText}>
+                      共 {group.templates.length} 版
+                    </Text>
+                  </View>
                 </View>
-                <View style={{ display: 'flex', gap: '12rpx' }}>
-                  <Button className={styles.reuseBtn} onClick={() => setDetailTpl(tpl)}>
-                    详情
-                  </Button>
-                  <Button className={styles.reuseBtn} onClick={() => handleReuse(tpl)}>
-                    复用
-                  </Button>
-                </View>
+
+                {group.templates.map((tpl, idx) => (
+                  <View key={tpl.id} className={classnames(styles.historyCard, idx === 0 && styles.historyCardLatest)}>
+                    <View className={styles.historyHead}>
+                      <View className={styles.historyHeadLeft}>
+                        <View className={classnames(styles.versionBadge, idx === 0 && styles.versionBadgeLatest)}>
+                          <Text className={styles.versionBadgeText}>v{tpl.version}</Text>
+                        </View>
+                        <Text className={styles.historyIncident} numberOfLines={1}>{tpl.incidentTitle}</Text>
+                      </View>
+                      <Text className={styles.historyTime}>{formatTime(tpl.generatedAt)}</Text>
+                    </View>
+
+                    {tpl.versionNote && (
+                      <View className={styles.versionNote}>
+                        <Text className={styles.versionNoteLabel}>版本说明：</Text>
+                        <Text className={styles.versionNoteText}>{tpl.versionNote}</Text>
+                      </View>
+                    )}
+
+                    <Text className={styles.historyPreview}>{tpl.progress}</Text>
+                    <View className={styles.historyMeta}>
+                      <View className={styles.historyMetaLeft}>
+                        <View className={styles.historyTag}>{CATEGORY_LABELS[tpl.incidentCategory]}</View>
+                        <View className={styles.historyTag}>{tpl.suggestedActions.length} 项动作</View>
+                        <View className={styles.historyTag}>by {tpl.generatedBy}</View>
+                        {tpl.snapshotHeat > 0 && (
+                          <View className={styles.historyTag}>热度 {tpl.snapshotHeat.toLocaleString()}</View>
+                        )}
+                      </View>
+                      <View style={{ display: 'flex', gap: '12rpx' }}>
+                        <Button className={styles.reuseBtn} onClick={() => setDetailTpl(tpl)}>
+                          详情
+                        </Button>
+                        <Button className={styles.reuseBtn} onClick={() => handleReuse(tpl)}>
+                          复用此版
+                        </Button>
+                      </View>
+                    </View>
+
+                    {idx < group.templates.length - 1 && (
+                      <View className={styles.versionConnector}>
+                        <View className={styles.versionConnectorLine}></View>
+                        <Text className={styles.versionConnectorText}>更新为 v{tpl.version - 1}</Text>
+                        <View className={styles.versionConnectorLine}></View>
+                      </View>
+                    )}
+                  </View>
+                ))}
               </View>
-            </View>
-          ))
+            ))}
+          </View>
         )}
       </View>
 
@@ -431,9 +492,29 @@ const SummaryPage: React.FC = () => {
             </View>
             <ScrollView scrollY className={styles.modalList} enhanced showScrollbar={false}>
               <View style={{ padding: '24rpx 32rpx' }}>
+                <View style={{ display: 'flex', alignItems: 'center', gap: '16rpx', marginBottom: '12rpx' }}>
+                  <View style={{ background: '#007AFF', padding: '6rpx 16rpx', borderRadius: '8rpx' }}>
+                    <Text style={{ fontSize: '24rpx', fontWeight: 600, color: '#fff' }}>v{detailTpl.version}</Text>
+                  </View>
+                  {detailTpl.previousId && (
+                    <Text style={{ fontSize: '22rpx', color: '#86909C' }}>上一版: v{detailTpl.version - 1}</Text>
+                  )}
+                </View>
+
                 <Text style={{ fontSize: '30rpx', fontWeight: 600, color: '#1D2129', marginBottom: '16rpx', display: 'block' }}>
                   {detailTpl.incidentTitle}
                 </Text>
+
+                {detailTpl.versionNote && (
+                  <View style={{ background: '#F0F7FF', padding: '16rpx', borderRadius: '12rpx', marginBottom: '20rpx' }}>
+                    <Text style={{ fontSize: '24rpx', color: '#007AFF', fontWeight: 500, display: 'block', marginBottom: '4rpx' }}>
+                      📝 版本说明
+                    </Text>
+                    <Text style={{ fontSize: '26rpx', color: '#1D2129', lineHeight: 1.6 }}>
+                      {detailTpl.versionNote}
+                    </Text>
+                  </View>
+                )}
 
                 <View style={{ display: 'flex', flexWrap: 'wrap', gap: '8rpx', marginBottom: '20rpx' }}>
                   <View className={styles.historyTag}>{CATEGORY_LABELS[detailTpl.incidentCategory]}</View>
